@@ -20,7 +20,7 @@
 ; Written by Ken Jennings
 ; Build for Atari using eclipse/wudsn/atasm on linux
 ; Source at:
-; Github: https://github.com/kenjennings/Breakout-GECE-for-Atari
+; Github: https://github.com/kenjennings/Atari-Breakout-GECE
 ; Google Drive: https://drive.google.com/drive/folders/
 ;===============================================================================
 
@@ -509,6 +509,17 @@ Next_Thumper_Bumper
 ; transition at any speed possible, since the ball
 ; is not dependant (or even visible) when these 
 ; graphics are on screen.
+; 
+; Scrolling to the left screen needs a special case, 
+; because the final stopping location is outside the 
+; 0 - 7 color clock positions used for scrolling.
+; (and using 0-15 would make this even more weird.)
+; 
+; Reminders: 
+; Left Scroll  = Decrement HSCROL, Increment LMS
+; Right Scroll = Increment HSCROL, Decrement LMS.
+
+
 
 	lda BRICK_SCREEN_START_SCROLL ; MAIN says to start scrolling?
 	beq Check_Brick_Scroll        ; No?  So, is Scroll already running.
@@ -538,6 +549,9 @@ Move_Brick_Row
 
 	lda BRICK_SCREEN_LMS_MOVE,x 	; Are we going left or right?
 	bmi Do_Brick_Right_Scroll		; minus means Right
+
+;;;;;
+;need special compensation to check for end position, because that is at 8, not 0-7
 	
 ; Doing Left
 	lda BRICK_CURRENT_HSCROL,x      ; get the current Hscrol for this row.
@@ -552,13 +566,12 @@ Move_Brick_Row
 Do_Brick_Right_Scroll		 
 	lda BRICK_CURRENT_HSCROL,x      ; get the current Hscrol for this row.
 	clc
-	adc BRICK_SCREEN_HSCROL_MOVE,X  ; decrement it to move line left.
+	adc BRICK_SCREEN_HSCROL_MOVE,X  ; increment it to move line right.
 	cmp #8 ; if greater or equal to 8
-	
-	bcc Update_HScrol  ; If no carry, then no coarse scroll.
-	clc                     ; Carry means this must be
-	sbc #8                  ; returned to positive. (using 8, not 16 color clocks)
-	inc BRICK_BASE,y        ; Coarse scroll it
+	bcc Update_HScrol       ; If no carry, then did not exceed 8/limit.
+	sec                     
+	sbc #8                  ; Subtract 8 (using 8, not 16 color clocks)
+	dec BRICK_BASE,y        ; Coarse scroll it
 
 Update_HScrol
 	sta BRICK_CURRENT_HSCROL,X ; Save new HSCROL.
