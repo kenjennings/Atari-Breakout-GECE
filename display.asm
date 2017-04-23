@@ -1622,6 +1622,12 @@ BRICK_SCREEN_LMS  .byte 0,20,41
 ;
 BRICK_SCREEN_HSCROL .byte 8,0,0
 ;
+; Move immediately to target positions if value is 1.
+; Copy the BRICK_BRICK_SCREEN_TARGET_LMS_LMS and 
+; BRICK_SCREEN_TARGET_HSCROL to all current positions.
+;
+BRICK_SCREEN_IMMEDIATE_POSITION .byte 0
+;
 ; Offsets of Display List LMS pointers (low byte) of each row position.
 ; BRICK_BASE+1, +5, +9, +13, +17, +21, +25, +29 is low byte of row.
 ;
@@ -1645,9 +1651,10 @@ BRICK_SCREEN_TARGET_LMS .byte 20,20,20,20,20,20,20,20
 ;
 BRICK_SCREEN_TARGET_HSCROL .byte 0,0,0,0,0,0,0,0
 ;
-; Increment or decrement the movement direction? 1=Left, -1=Right
+; Increment or decrement the movement direction? 
+; -1= view Left/graphics right, +1=view Right/graphics left
 ;
-BRICK_SCREEN_LMS_MOVE .byte 1,-1,1,-1,1,-1,1,-1
+BRICK_SCREEN_DIRECTION .byte 1,-1,1,-1,1,-1,1,-1
 ;
 ; Brick Screen speed to move (HSCROLs +/- per frame)
 ;
@@ -1816,7 +1823,8 @@ BALL_YPOS_TO_BRICK_TABLE
 ; two separate Boom-o-matics possible for each line.   Realistically, 
 ; given the ball motion and collision policy it is impossible to request 
 ; two Boom cycles begin on the same frame for the same row, and would be 
-; unlikely to have multiple animations running on every line.
+; unlikely to have multiple animations running on every line. (But, just
+; in case the code plans for the worst.)
 ;
 ; When MAIN code detects collision it will generate a request for a Boom-O-Matic
 ; animation that VBI will service.  VBI will determine if the request is for
@@ -1828,8 +1836,11 @@ BALL_YPOS_TO_BRICK_TABLE
 
 ENABLE_BOOM .byte 0
 
-BOOM_1_REQUEST .byte 0,0,0,0,0,0,0,0 ; MAIN provides brick number in this row.
-BOOM_2_REQUEST .byte 0,0,0,0,0,0,0,0 ; MAIN provides brick number in this row.
+BOOM_1_REQUEST .byte 0,0,0,0,0,0,0,0 ; MAIN provides flag to add this brick. 0 = no brick. 1 = new brick.
+BOOM_2_REQUEST .byte 0,0,0,0,0,0,0,0 ; MAIN provides flag to add this brick.
+
+BOOM_1_REQUEST_BRICK .byte 0,0,0,0,0,0,0,0 ; MAIN provides brick number in this row. 0 - 13
+BOOM_2_REQUEST_BRICK .byte 0,0,0,0,0,0,0,0 ; MAIN provides brick number in this row. 0 - 13
 
 BOOM_1_CYCLE .byte 0,0,0,0,0,0,0,0 ; VBI needs one for each row (0 = no animation)
 BOOM_2_CYCLE .byte 0,0,0,0,0,0,0,0 ; VBI needs one for each row
@@ -1846,39 +1857,43 @@ BOOM_2_SIZE .byte 0,0,0,0,0,0,0,0 ; DLI needs P/M SIZE2 for row
 BOOM_1_COLPM .byte 0,0,0,0,0,0,0,0 ; DLI needs P/M COLPM1 for row
 BOOM_2_COLPM .byte 0,0,0,0,0,0,0,0 ; DLI needs P/M COLPM2 for row
 
-BOOM_CYCLE_COLOR ; by row by cycle frame -- 8 frames per boom animation
-	.byte $0E,COLOR_PINK|$0E,COLOR_PINK|$0C,COLOR_PINK|$0A,COLOR_PINK|$08,COLOR_PINK|$06,COLOR_PINK|$04,$02
-	.byte $0E,COLOR_PINK|$0E,COLOR_PINK|$0C,COLOR_PINK|$0A,COLOR_PINK|$08,COLOR_PINK|$06,COLOR_PINK|$04,$02
-	.byte $0E,COLOR_RED_ORANGE|$0E,COLOR_RED_ORANGE|$0C,COLOR_RED_ORANGE|$0A,COLOR_RED_ORANGE|$08,COLOR_RED_ORANGE|$06,COLOR_RED_ORANGE|$04,$02
-	.byte $0E,COLOR_RED_ORANGE|$0E,COLOR_RED_ORANGE|$0C,COLOR_RED_ORANGE|$0A,COLOR_RED_ORANGE|$08,COLOR_RED_ORANGE|$06,COLOR_RED_ORANGE|$04,$02
-	.byte $0E,COLOR_GREEN|$0E,COLOR_GREEN|$0C,COLOR_GREEN|$0A,COLOR_GREEN|$08,COLOR_GREEN|$06,COLOR_GREEN|$04,$02
-	.byte $0E,COLOR_GREEN|$0E,COLOR_GREEN|$0C,COLOR_GREEN|$0A,COLOR_GREEN|$08,COLOR_GREEN|$06,COLOR_GREEN|$04,$02
-	.byte $0E,COLOR_LITE_ORANGE|$0E,COLOR_LITE_ORANGE|$0C,COLOR_LITE_ORANGE|$0A,COLOR_LITE_ORANGE|$08,COLOR_LITE_ORANGE|$06,COLOR_LITE_ORANGE|$04,$02
-	.byte $0E,COLOR_LITE_ORANGE|$0E,COLOR_LITE_ORANGE|$0C,COLOR_LITE_ORANGE|$0A,COLOR_LITE_ORANGE|$08,COLOR_LITE_ORANGE|$06,COLOR_LITE_ORANGE|$04,$02
+BOOM_CYCLE_COLOR ; by row by cycle frame -- 9 frames per boom animation
+	.byte $0E,COLOR_PINK|$0E,       COLOR_PINK|$0C,       COLOR_PINK|$0A,       COLOR_PINK|$08,COLOR_PINK|$06,COLOR_PINK|$04,$02,$00
+	.byte $0E,COLOR_PINK|$0E,       COLOR_PINK|$0C,       COLOR_PINK|$0A,       COLOR_PINK|$08,COLOR_PINK|$06,COLOR_PINK|$04,$02,$00
+	.byte $0E,COLOR_RED_ORANGE|$0E, COLOR_RED_ORANGE|$0C, COLOR_RED_ORANGE|$0A, COLOR_RED_ORANGE|$08,COLOR_RED_ORANGE|$06,COLOR_RED_ORANGE|$04,$02,$00
+	.byte $0E,COLOR_RED_ORANGE|$0E, COLOR_RED_ORANGE|$0C, COLOR_RED_ORANGE|$0A, COLOR_RED_ORANGE|$08,COLOR_RED_ORANGE|$06,COLOR_RED_ORANGE|$04,$02,$00
+	.byte $0E,COLOR_GREEN|$0E,      COLOR_GREEN|$0C,      COLOR_GREEN|$0A,      COLOR_GREEN|$08,COLOR_GREEN|$06,COLOR_GREEN|$04,$02,$00
+	.byte $0E,COLOR_GREEN|$0E,      COLOR_GREEN|$0C,      COLOR_GREEN|$0A,      COLOR_GREEN|$08,COLOR_GREEN|$06,COLOR_GREEN|$04,$02,$00
+	.byte $0E,COLOR_LITE_ORANGE|$0E,COLOR_LITE_ORANGE|$0C,COLOR_LITE_ORANGE|$0A,COLOR_LITE_ORANGE|$08,COLOR_LITE_ORANGE|$06,COLOR_LITE_ORANGE|$04,$02,$00
+	.byte $0E,COLOR_LITE_ORANGE|$0E,COLOR_LITE_ORANGE|$0C,COLOR_LITE_ORANGE|$0A,COLOR_LITE_ORANGE|$08,COLOR_LITE_ORANGE|$06,COLOR_LITE_ORANGE|$04,$02,$00
 
+BOOM_CYCLE_OFFSET ; Base offset (row * 9) to the color entries and P/M images for the cycle.
+	.byte $00,9,18,27,36,45,54,63,72
+	
 BOOM_CYCLE_HPOS ; by cycle frame -- relative to Brick from BRICK_XPOS_LEFT_TABLE
-	.byte $ff,$ff,$00,$00,$01,$02,$03,$04
+	.byte $ff,$ff,$00,$00,$01,$02,$03,$04,$04
 
 BOOM_CYCLE_SIZE ; by cycle frame
-	.byte PM_SIZE_DOUBLE ; 6 bits * 2 color clocks == 12 color clocks.
-	.byte PM_SIZE_DOUBLE ; 6 bits * 2 color clocks == 12 color clocks.
-	.byte PM_SIZE_DOUBLE ; 5 bits * 2 color clocks == 10 color clocks.
-	.byte PM_SIZE_DOUBLE ; 5 bits * 2 color clocks == 10 color clocks.
-	.byte PM_SIZE_NORMAL ; 8 bits * 1 color clocks == 8 color clocks.
-	.byte PM_SIZE_NORMAL ; 6 bits * 1 color clocks == 6 color clocks.
-	.byte PM_SIZE_NORMAL ; 4 bits * 1 color clocks == 4 color clocks.
-	.byte PM_SIZE_NORMAL ; 2 bits * 1 color clocks == 2 color clocks.
+	.byte PM_SIZE_DOUBLE ; 6 bits * 2 color clocks == 12 color clocks. ; 1
+	.byte PM_SIZE_DOUBLE ; 6 bits * 2 color clocks == 12 color clocks. ; 2
+	.byte PM_SIZE_DOUBLE ; 5 bits * 2 color clocks == 10 color clocks. ; 3
+	.byte PM_SIZE_DOUBLE ; 5 bits * 2 color clocks == 10 color clocks. ; 4
+	.byte PM_SIZE_NORMAL ; 8 bits * 1 color clocks == 8 color clocks.  ; 5
+	.byte PM_SIZE_NORMAL ; 6 bits * 1 color clocks == 6 color clocks.  ; 6
+	.byte PM_SIZE_NORMAL ; 4 bits * 1 color clocks == 4 color clocks.  ; 7
+	.byte PM_SIZE_NORMAL ; 2 bits * 1 color clocks == 2 color clocks.  ; 8
+	.byte PM_SIZE_NORMAL ; 2 bits * 1 color clocks == 2 color clocks.  ; 9
 	
-BOOM_ANIMATION_FRAMES ; 7 bytes of Player image data per each cycle frame -- 8th byte 0 padded for easier math.  
-	.byte $FC,$FC,$FC,$FC,$FC,$FC,$FC,$00 ; 7 scan lines, 6 bits * 2 color clocks == 12 color clocks.
-	.byte $FC,$FC,$FC,$FC,$FC,$FC,$FC,$00 ; 7 scan lines, 6 bits * 2 color clocks == 12 color clocks.
-	.byte $00,$F8,$F8,$F8,$F8,$F8,$00,$00 ; 5 scan lines, 5 bits * 2 color clocks == 10 color clocks.
-	.byte $00,$F8,$F8,$F8,$F8,$F8,$00,$00 ; 5 scan lines, 5 bits * 2 color clocks == 10 color clocks.
-	.byte $00,$00,$FF,$FF,$FF,$00,$00,$00 ; 3 scan lines, 8 bits * 1 color clocks == 8 color clocks.
-	.byte $00,$00,$FC,$FC,$FC,$00,$00,$00 ; 3 scan lines, 6 bits * 1 color clocks == 6 color clocks.
-	.byte $00,$00,$00,$F0,$00,$00,$00,$00 ; 1 scan line, 4 bits * 1 color clocks == 4 color clocks.
-	.byte $00,$00,$00,$C0,$00,$00,$00,$00 ; 1 scan line, 2 bits * 1 color clocks == 2 color clocks.
-
+BOOM_ANIMATION_FRAMES ; 7 bytes of Player image data per each cycle frame -- 8th and 9th byte 0 padded, since we have a offset table for * 9 
+	.byte $FC,$FC,$FC,$FC,$FC,$FC,$FC,$00,$00 ; 7 scan lines, 6 bits * 2 color clocks == 12 color clocks. ; 1
+	.byte $FC,$FC,$FC,$FC,$FC,$FC,$FC,$00,$00 ; 7 scan lines, 6 bits * 2 color clocks == 12 color clocks. ; 2
+	.byte $00,$F8,$F8,$F8,$F8,$F8,$00,$00,$00 ; 5 scan lines, 5 bits * 2 color clocks == 10 color clocks. ; 3
+	.byte $00,$F8,$F8,$F8,$F8,$F8,$00,$00,$00 ; 5 scan lines, 5 bits * 2 color clocks == 10 color clocks. ; 4
+	.byte $00,$00,$FF,$FF,$FF,$00,$00,$00,$00 ; 3 scan lines, 8 bits * 1 color clocks == 8 color clocks.  ; 5
+	.byte $00,$00,$FC,$FC,$FC,$00,$00,$00,$00 ; 3 scan lines, 6 bits * 1 color clocks == 6 color clocks.  ; 6
+	.byte $00,$00,$00,$F0,$00,$00,$00,$00,$00 ; 1 scan line, 4 bits * 1 color clocks == 4 color clocks.   ; 7
+	.byte $00,$00,$00,$C0,$00,$00,$00,$00,$00 ; 1 scan line, 2 bits * 1 color clocks == 2 color clocks.   ; 8
+	.byte $00,$00,$00,$00,$00,$00,$00,$00,$00 ; 0 scan line, 0 bits * 0 color clocks == 0 color clocks.   ; 9
 
 ; ==============================================================
 ; BALL:
