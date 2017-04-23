@@ -516,83 +516,316 @@ Next_Thumper_Bumper
 ; (and using 0-15 would make this even more weird.)
 ; 
 ; Reminders: 
-; Left Scroll  = Decrement HSCROL, Increment LMS
-; Right Scroll = Increment HSCROL, Decrement LMS.
+; Move view right/screen contents Left = Decrement HSCROL, Increment LMS
+; Move view left/screen contents Right = Increment HSCROL, Decrement LMS.
+;
+; Two different screen moves here.  
+;
+; The first is an immediate move to the declared positions.  This would 
+; be used to reset to starting positions before setting up a scroll.
+;
+; The second scroll is fine scroll from current position to target position.
+;
+	lda BRICK_SCREEN_IMMEDIATE_POSITION ; move screen directly.
+	beq Fine_Scroll_Display             ; if not set, then try fine scroll
+	
+	ldx #7
+Do_Next_Immediate_Move
+	ldy BRICK_CURRENT_LMS_OFFSETS,x  ; Y = current position of LMS low byte in Display List
+	lda BRICK_SCREEN_TARGET_LMS,x    ; Get destination position.
+	sta BRICK_BASE,y                 ; Set the new Display List LMS pointer.
+	lda BRICK_SCREEN_TARGET_HSCROL,x ; get the destination position.
+	sta BRICK_CURRENT_HSCROL,x       ; set the current Hscrol for this row.
+	
+	dex
+	bpl Do_Next_Immediate_Move
 
+	lda #0  ; Clear the immediate move flag, and skip over doing fine scroll...
+	sta BRICK_SCREEN_IMMEDIATE_POSITION
+	beq End_Brick_Scroll_Update
 
-
+Fine_Scroll_Display   
 	lda BRICK_SCREEN_START_SCROLL ; MAIN says to start scrolling?
-	beq Check_Brick_Scroll        ; No?  So, is Scroll already running.
+	beq Check_Brick_Scroll        ; No?  So, is a Scroll already running.
+	; and if a scroll is already in progress when MAIN toggles
+	; the BRICK_SCREEN_START_SCROLL flag it really has no effect.
+	; the current scroll keeps on scrolling.
 	lda #0
 	sta BRICK_SCREEN_START_SCROLL ; Turn off MAIN request.
-	lda #1
-	sta BRICK_SCREEN_IN_MOTION ; Turn On Scroll in progress.
+	inc BRICK_SCREEN_IN_MOTION    ; Temporarily flag Scroll in progress.
 
 Check_Brick_Scroll
 	lda BRICK_SCREEN_IN_MOTION
 	beq End_Brick_Scroll_Update
 
+	lda #0     ; Temporarily indicate no motion
+	sta BRICK_SCREEN_IN_MOTION 
+	
 	ldx #7 ; start at last/bottom row.
 	
-Do_Row_Movement
+Check_Pause_or_Movement
 	lda BRICK_SCREEN_MOVE_DELAY,x ; Delay for frame count?
 	beq Move_Brick_Row
+	inc BRICK_SCREEN_IN_MOTION ; indicate things in progress
 	dec BRICK_SCREEN_MOVE_DELAY,x
-	clc
-	bcc Do_Next_Brick_Row
+	jmp Do_Next_Brick_Row
 	
 Move_Brick_Row
-	ldy BRICK_CURRENT_LMS_OFFSETS,x 
-	lda BRICK_BASE,y                ; What is the LMS pointer now?
+	ldy BRICK_CURRENT_LMS_OFFSETS,x ; Y = current position of LMS low byte in Display List
+	lda BRICK_BASE,y                ; What is the Display List LMS pointer now?
 	cmp BRICK_SCREEN_TARGET_LMS,x   ; Does it match target?
-	beq Finish_Brick_HScroll          ; Yes.  Is more HScroll needed?
+	beq Finish_Brick_HScroll        ; Yes.  Then is more HScroll needed?
 
-	lda BRICK_SCREEN_LMS_MOVE,x 	; Are we going left or right?
-	bmi Do_Brick_Right_Scroll		; minus means Right
+	lda BRICK_SCREEN_DIRECTION,x 	; Are we going left or right?
+	bpl Do_Bricks_Right_Scroll		; -1 = view Right/graphics left, +1 = view left/graphics right
 
-;;;;;
-;need special compensation to check for end position, because that is at 8, not 0-7
-	
-; Doing Left
+; scroll View Right/screen contents left 
 	lda BRICK_CURRENT_HSCROL,x      ; get the current Hscrol for this row.
-	clc
-	sbc BRICK_SCREEN_HSCROL_MOVE,X  ; decrement it to move line left.
-	bcc Update_HScrol  ; If no carry, then no coarse scroll.
-	clc                     ; Carry means this must be
-	adc #8                  ; returned to positive. (using 8, not 16 color clocks)
-	inc BRICK_BASE,y        ; Coarse scroll it
+	sec
+	sbc BRICK_SCREEN_HSCROL_MOVE,X  ; decrement it to move graphics left.
+	bpl Update_HScrol       ; If not negative, then no coarse scroll.
+	clc                     ; Add to return this...
+	adc #8                  ; ... to positive. (using 8, not 16 color clocks)
+	inc BRICK_BASE,y        ; IncrementLMS to Coarse scroll it
     bne Update_HScrol
 	
-Do_Brick_Right_Scroll		 
+Do_Bricks_Right_Scroll	    ; Move view left/screen contents Right
 	lda BRICK_CURRENT_HSCROL,x      ; get the current Hscrol for this row.
 	clc
-	adc BRICK_SCREEN_HSCROL_MOVE,X  ; increment it to move line right.
+	adc BRICK_SCREEN_HSCROL_MOVE,X  ; increment it to move graphics right.
 	cmp #8 ; if greater or equal to 8
-	bcc Update_HScrol       ; If no carry, then did not exceed 8/limit.
+	bcc Update_HScrol       ; If no carry, then less than 8/limit.
 	sec                     
 	sbc #8                  ; Subtract 8 (using 8, not 16 color clocks)
 	dec BRICK_BASE,y        ; Coarse scroll it
+	; need special compensation to check for end position, because that 
+	; is at byte 0, hscrol 8, not hscrol 0-7
+	lda BRICK_BASE,y
+	bpl Update_HScrol ; still positive, so we did not pass byte 0, hscrol 8
+	lda #0            ; back it up to the end position...
+	sta BRICK_BASE,y  ; byte 0
+	lda #8            ; hscrol 8
+	bpl Update_HScrol
+
+; The current LMS matches the target LMS. 
+; a final Hscroll may be needed.
+Finish_Brick_HScroll 
+	lda BRICK_CURRENT_HSCROL,X
+	cmp BRICK_SCREEN_TARGET_HSCROL,x
+	beq Do_Next_Brick_Row ; Everything matches. nothing to do.
+
+	lda BRICK_SCREEN_DIRECTION,x 	; Are we going left or right?
+	bpl Do_Finish_Right_Scroll		; -1 = view left/graphics right, +1 = view Right/graphics left
+	
+; scroll View Left/screen contents right 
+	lda BRICK_CURRENT_HSCROL,x      ; get the current Hscrol for this row.
+	sec
+	sbc BRICK_SCREEN_HSCROL_MOVE,X  ; decrement it to move graphics left.
+	bmi Set_Left_Home               ; If it went negative reset to end position.
+	bpl Update_HScrol               ; If not negative, then no coarse scroll.
+Set_Left_Home
+	lda BRICK_SCREEN_TARGET_HSCROL,x ; if it went negative then reset to home
+	sta BRICK_CURRENT_HSCROL,X
+	jmp Update_HScrol
+	
+Do_Finish_Right_Scroll
+	lda BRICK_CURRENT_HSCROL,x      ; get the current Hscrol for this row.
+	clc
+	adc BRICK_SCREEN_HSCROL_MOVE,X  ; increment it to move line right.
+	cmp BRICK_SCREEN_TARGET_HSCROL,X ; if greater or equal to, then set to limit
+	bcc Update_HScrol       ; If no carry, then did not exceed limit.
+	lda BRICK_SCREEN_TARGET_HSCROL,X                     
 
 Update_HScrol
+	inc BRICK_SCREEN_IN_MOTION ; indicate things in motion
 	sta BRICK_CURRENT_HSCROL,X ; Save new HSCROL.
-	jmp Do_Next_Brick_Row
-
-
-
-Finish_Brick_HScroll ; Current LMS matches target LMS. More Hscroll may be needed.
-
 
 Do_Next_Brick_Row
 	dex
 	bpl Do_Row_Movement
-	bmi End_Brick_Scroll_Update
 	
 End_Brick_Scroll_Update
 
-	
+
 ;===============================================================================
 ; BOOM-O-MATIC
+;===============================================================================
+; Players 1 and 2 implement a Boom animation for bricks knocked out.
+; The animation overlays the destroyed brick with a player two scan lines 
+; and two color clocks larger than the brick.  This is centered on the brick
+; providing a first frame impression that the brick expands. On subsequent 
+; frames the image shrinks and color fades. 
+;
+; A DLI cuts these two players HPOS for each line of bricks, so there are 
+; two separate Boom-o-matics possible for each line.   Realistically, 
+; given the ball motion and collision policy it is impossible to request 
+; two Boom cycles begin on the same frame for the same row, and would be 
+; unlikely to have multiple animations running on every line. (But, just
+; in case the code plans for the worst.)
+;
+; When MAIN code detects collision it will generate a request for a Boom-O-Matic
+; animation that VBI will service.  VBI will determine if the request is for
+; Boom 1 or Boom 2 .  If both animation cycles are in progress the one with the
+; most progress will reset itself for the new animation.
+;
+; Side note -- maybe a future iteration will utilize the boom-o-matic blocks 
+; during Title or Game Over sequences.
 
+;
+; First, is boom enabled?   If not, zero boom positions.
+;
+	lda ENABLE_BOOM
+	bne Add_New_Boom
+	; No boom. MAIN should have zero'd all HPOS and animation states.
+	jmp End_Boom_O_Matic
+
+	; New Rules for New Boom.   
+	; The code was becoming insane.  So, there are now limits on behavior.
+	;
+	; MAIN must set request 1 first, so there will be no situation 
+	; when request 1 is not set and request 2 is set.
+	; Boom cycles are always set in order 1, then 2.
+	; Therefore, when adding a new cycle the current 
+	; state of Boom 1 is copied to Boom 2 and the new Boom
+	; is inserted in Boom 1.  This simplifies the madness.
+
+Add_New_Boom ; Add any new requests to the lists.
+	ldx #7 
+
+New_Boom_Loop
+	lda BOOM_1_REQUEST,x ; is request flag set?
+	beq Next_Boom_Test ; no, therefore, so 2 is not set either.
+	lda BOOM_1_CYCLE,x ; If this is 0 then use it.
+	beq Assign_Boom_1
+	; Boom 1 already in use.
+	; First Move Boom 1 state to Boom 2.
+	jsr Push_Boom_1_To_Boom_2
+	
+	; Assign request 1 to Boom 1.
+Assign_Boom_1
+	lda BOOM_1_REQUEST_BRICK,x ; Get requested brick, 0 to 13
+	sta BOOM_1_BRICK,x         ; assign to current animation
+	lda #1                     ; set first frame of animation
+	sta BOOM_1_CYCLE,x
+
+	; Try assigning new request 2.
+Try_New_Boom_2
+	lda BOOM_2_REQUEST,x ; is request flag set?
+	beq Next_Boom_Test ; no, therefore, done adding boom for this row.
+	; Do not need to test the cycle, since if we got 
+	; here Request 1 was already assigned to Boom 1.
+	; So, push current Boom 1 to Boom 2.
+	jsr Push_Boom_1_To_Boom_2
+	; Assign request 2 to Boom 1.
+	lda BOOM_2_REQUEST_BRICK,x ; Get requested brick, 0 to 13
+	sta BOOM_1_BRICK,x         ; assign to current animation
+	lda #1                     ; set first frame of animation
+	sta BOOM_1_CYCLE,x
+
+Next_Boom_Test
+	dex
+	bpl New_Boom_Loop
+	
+; Next walk through the current Boom cycles, do the 
+; animation changes and update the values.
+Animate_Boom_O_Matic
+	ldx #7 
+
+New_Boom_Animation_Loop
+	ldy BOOM_1_CYCLE,x ; If this is not zero, then animate it.
+	bne Boom_Animation_1
+	; if cycle is 0 it could be because the last frame
+	; reached the end of animation.  Force HPOS 0, just in case.
+	lda #0
+	sta BOOM_1_HPOS,x
+	sta BOOM_2_HPOS,x
+	beq Next_Boom_Animation
+
+Boom_Animation_1
+	dey                ; makes cycle 1 - 9 easier to lookup as 0 - 8
+	sty PARAM7         ; Save Cycle
+	stx PARAM6         ; Save Row
+
+	lda BOOM_CYCLE_SIZE,y ; Get P/M Size for this cycle
+	sta BOOM_1_SIZE,y     ; Set size.
+
+	; P/M position varies by brick, and by cycle.
+	ldy BOOM_1_BRICK,x          ; Get Brick
+	lda BRICK_XPOS_LEFT_TABLE,y ; get brick HPOS
+	ldy PARAM7                  ; get current cycle.
+	adc BOOM_CYCLE_HPOS,y       ; adjust HPOS by the current cycle.
+	sta BOOM_1_HPOS,x
+	
+	; P/M Color is based on row and by cycle.
+	; Multiply row times 9 in offset table, then add row to get entry.
+	ldy BOOM_CYCLE_OFFSET,x
+	lda BOOM_CYCLE_COLOR,y
+	sta BOOM_1_COLPM,x
+	
+	; Last copy 7 bytes of P/M image to correct Y pos.
+	; Convert row to P/M ypos.
+	; multiply cycle times 9.
+	; copy 7 bytes from table to p/m base.
+	lda #>PMADR_BASE1
+	sta ZEROPAGE_POINTER_8+1
+	lda BRICK_YPOS_TOP_TABLE,x
+	sta ZEROPAGE_POINTER_8
+	
+	lda BOOM_CYCLE_OFFSET,x
+	tax
+	ldy #00
+	
+Loop_Copy_PM_1_Boom
+	lda BOOM_ANIMATION_FRAMES,x
+	sta (ZEROPAGE_POINTER_8),y
+	inx
+	iny
+	cpy #8
+	bne Loop_Copy_PM_1_Boom
+
+	; Boom 1 is done.  Let's try Boom 2.
+	ldx PARAM6  	; Get the row back.
+	
+	
+	
+	
+	
+	
+	
+	
+	lda BOOM_1_REQUEST,x ; is animation cycle in progress?
+	beq Next_Boom_Animation ; no, therefore, so 2 is not set either.
+	beq Assign_Boom_1
+	; Boom 1 already in use.
+	; First Move Boom 1 state to Boom 2.
+	jsr Push_Boom_1_To_Boom_2
+	
+	; Assign request 1 to Boom 1.
+Assign_Boom_1
+	lda BOOM_1_REQUEST_BRICK,x
+	sta BOOM_1_BRICK,x
+	lda #1
+	sta BOOM_1_CYCLE,x
+
+	; Try assigning new request 2.
+Try_New_Boom_2
+	lda BOOM_2_REQUEST,x ; is request flag set?
+	beq Next_Boom_Test ; no, therefore, done adding boom for this row.
+	; Do not need to test the cycle, since if we got 
+	; here Request 1 was already assigned to Boom 1.
+	; So, push current Boom 1 to Boom 2.
+	jsr Push_Boom_1_To_Boom_2
+	; Assign request 2 to Boom 1.
+	lda BOOM_2_REQUEST_BRICK,x
+	sta BOOM_1_BRICK,x
+	lda #1
+	sta BOOM_1_CYCLE,x
+
+Next_Boom_Animation
+	dex
+	bpl New_Boom_Animation_Loop
+
+End_Boom_O_Matic
 
 ;===============================================================================
 ; PADDLE
@@ -645,6 +878,7 @@ Update_Color_Counter
 
 End_Update_Title_Scroll	
 	rts
+
 	
 ;=============================================
 ; Erase the Title text from the Title lines.
@@ -660,4 +894,14 @@ Clear_Title_Char
 	
 	rts
 
-	
+
+;=============================================
+; Push the current state of Boom 1 to Boom 2.
+; X = current row.
+Push_Boom_1_To_Boom_2
+	lda BOOM_1_BRICK,x
+	sta BOOM_2_BRICK,x
+	lda BOOM_1_CYCLE,x
+	sta BOOM_2_CYCLE_x
+
+	rts
