@@ -672,7 +672,7 @@ End_Brick_Scroll_Update
 ; during Title or Game Over sequences.
 
 ;
-; First, is boom enabled?   If not, zero boom positions.
+; First, is boom enabled?
 ;
 	lda ENABLE_BOOM
 	bne Add_New_Boom
@@ -732,11 +732,11 @@ Animate_Boom_O_Matic
 	ldx #7 
 
 New_Boom_Animation_Loop
-	ldy BOOM_1_CYCLE,x ; If this is not zero, then animate it.
-	bne Boom_Animation_1
+	ldy BOOM_1_CYCLE,x   ; If this is not zero, 
+	bne Boom_Animation_1 ; then animate it.
 	; if cycle is 0 it could be because the last frame
-	; reached the end of animation.  Force HPOS 0, just in case.
-	lda #0
+	; reached the end of animation.  
+	lda #0                ; Force HPOS 0, just in case.
 	sta BOOM_1_HPOS,x
 	sta BOOM_2_HPOS,x
 	beq Next_Boom_Animation
@@ -746,13 +746,14 @@ Boom_Animation_1
 	sty PARAM7         ; Save Cycle
 	stx PARAM6         ; Save Row
 
-	lda BOOM_CYCLE_SIZE,y ; Get P/M Size for this cycle
+	lda BOOM_CYCLE_SIZE,y ; Get P/M Horizontal Size for this cycle
 	sta BOOM_1_SIZE,y     ; Set size.
 
 	; P/M position varies by brick, and by cycle.
 	ldy BOOM_1_BRICK,x          ; Get Brick
 	lda BRICK_XPOS_LEFT_TABLE,y ; get brick HPOS
 	ldy PARAM7                  ; get current cycle.
+	clc
 	adc BOOM_CYCLE_HPOS,y       ; adjust HPOS by the current cycle.
 	sta BOOM_1_HPOS,x
 	
@@ -762,70 +763,207 @@ Boom_Animation_1
 	lda BOOM_CYCLE_COLOR,y
 	sta BOOM_1_COLPM,x
 	
-	; Last copy 7 bytes of P/M image to correct Y pos.
+	; Last: copy 7 bytes of P/M image to correct Y pos.
 	; Convert row to P/M ypos.
 	; multiply cycle times 9.
 	; copy 7 bytes from table to p/m base.
-	lda #>PMADR_BASE1
-	sta ZEROPAGE_POINTER_8+1
-	lda BRICK_YPOS_TOP_TABLE,x
-	sta ZEROPAGE_POINTER_8
+	ldy BRICK_YPOS_TOP_TABLE,x ; Get scan line of top of brick.
+	dey                        ; -1.  one line higher for exploding brick.
+	sta ZEROPAGE_POINTER_8     ; low byte for player/missile address. 
+	lda #>PMADR_BASE1          ; Player 1 Base,  
+	sta ZEROPAGE_POINTER_8+1   ; high byte.
 	
-	lda BOOM_CYCLE_OFFSET,x
+	lda BOOM_CYCLE_OFFSET,x   ; Get Starting offset for animation for this frame
 	tax
-	ldy #00
+	ldy #$00
 	
 Loop_Copy_PM_1_Boom
-	lda BOOM_ANIMATION_FRAMES,x
-	sta (ZEROPAGE_POINTER_8),y
-	inx
+	lda BOOM_ANIMATION_FRAMES,x ; Read from animation table
+	sta (ZEROPAGE_POINTER_8),y  ; Store in Player memory
+	inx                         ; increment... to next byte
 	iny
-	cpy #8
+	cpy #8                      ; stop at 7 bytes.
 	bne Loop_Copy_PM_1_Boom
 
-	; Boom 1 is done.  Let's try Boom 2.
-	ldx PARAM6  	; Get the row back.
-	
-	
-	
-	
-	
-	
-	
-	
-	lda BOOM_1_REQUEST,x ; is animation cycle in progress?
-	beq Next_Boom_Animation ; no, therefore, so 2 is not set either.
-	beq Assign_Boom_1
-	; Boom 1 already in use.
-	; First Move Boom 1 state to Boom 2.
-	jsr Push_Boom_1_To_Boom_2
-	
-	; Assign request 1 to Boom 1.
-Assign_Boom_1
-	lda BOOM_1_REQUEST_BRICK,x
-	sta BOOM_1_BRICK,x
-	lda #1
-	sta BOOM_1_CYCLE,x
+	; Boom 1 is done.
+	; Now try Boom 2.
+	;
+	ldx PARAM6  	; Get the real row back.
 
-	; Try assigning new request 2.
-Try_New_Boom_2
-	lda BOOM_2_REQUEST,x ; is request flag set?
-	beq Next_Boom_Test ; no, therefore, done adding boom for this row.
-	; Do not need to test the cycle, since if we got 
-	; here Request 1 was already assigned to Boom 1.
-	; So, push current Boom 1 to Boom 2.
-	jsr Push_Boom_1_To_Boom_2
-	; Assign request 2 to Boom 1.
-	lda BOOM_2_REQUEST_BRICK,x
-	sta BOOM_1_BRICK,x
-	lda #1
-	sta BOOM_1_CYCLE,x
+	ldy BOOM_2_CYCLE,x   ; If this is not zero, 
+	bne Boom_Animation_2 ; then animate it.
+	beq Next_Boom_Animation
+
+Boom_Animation_2
+	dey                ; makes cycle 1 - 9 easier to lookup as 0 - 8
+	sty PARAM7         ; Save Cycle
+
+	lda BOOM_CYCLE_SIZE,y ; Get P/M Horizontal Size for this cycle
+	sta BOOM_2_SIZE,y     ; Set size.
+
+	; P/M position varies by brick, and by cycle.
+	ldy BOOM_2_BRICK,x          ; Get Brick
+	lda BRICK_XPOS_LEFT_TABLE,y ; get brick HPOS
+	ldy PARAM7                  ; get current cycle.
+	clc
+	adc BOOM_CYCLE_HPOS,y       ; adjust HPOS by the current cycle.
+	sta BOOM_2_HPOS,x
+	
+	; P/M Color is based on row and by cycle.
+	; Multiply row times 9 in offset table, then add row to get entry.
+	ldy BOOM_CYCLE_OFFSET,x
+	lda BOOM_CYCLE_COLOR,y
+	sta BOOM_2_COLPM,x
+	
+	; Last: copy 7 bytes of P/M image to correct Y pos.
+	; Convert row to P/M ypos.
+	; multiply cycle times 9.
+	; copy 7 bytes from table to p/m base.
+	ldy BRICK_YPOS_TOP_TABLE,x ; Get scan line of top of brick.
+	dey                        ; -1.  one line higher for exploding brick.
+	sta ZEROPAGE_POINTER_8     ; low byte for player/missile address. 
+	lda #>PMADR_BASE2          ; Player 2 Base,  
+	sta ZEROPAGE_POINTER_8+1   ; high byte.
+	
+	lda BOOM_CYCLE_OFFSET,x   ; Get Starting offset for animation for this frame
+	tax
+	ldy #$00
+	
+Loop_Copy_PM_2_Boom
+	lda BOOM_ANIMATION_FRAMES,x ; Read from animation table
+	sta (ZEROPAGE_POINTER_8),y  ; Store in Player memory
+	inx                         ; increment... to next byte
+	iny
+	cpy #8                      ; stop at 7 bytes.
+	bne Loop_Copy_PM_2_Boom
 
 Next_Boom_Animation
 	dex
 	bpl New_Boom_Animation_Loop
 
 End_Boom_O_Matic
+
+
+;===============================================================================
+; SCROLL PROMPTS AND CREDITS
+; VBI manages text fade in/out, and 
+; the vertical scroll up of the prompt or
+; 
+; Future enhancement ideee-er:
+; Allow user to rotate the Paddle to control 
+; the position of the long scrolling text.
+; Kewl.
+
+; First, is scrolling window enabled?
+;
+	lda ENABLE_CREDIT_SCROLL
+	beq End_Credit_Prompt_Scroll ; Nope. Skip everything.
+
+	; Yes, we are moving...
+	; If the timer is expired
+	ldy SCROLL_CURRENT_TICK ; If Tick reaches 0, 
+	beq Reset_Scroll_Delay  ; then restart. (and do a scroll action)
+	
+	dec SCROLL_CURRENT_TICK ;
+	bpl End_Credit_Prompt_Scroll ; 0 will be caught above.
+	
+Reset_Scroll_Delay
+	ldy SCROLL_TICK_DELAY
+	sty SCROLL_CURRENT_TICK
+
+; Check for fade actions first.
+	ldy SCROLL_DO_FADE  ; MAIN Direct new Fade?
+	beq Do_Scroll_Fade_In_Progress ; Nope.  check if we're already busy.
+
+	sty SCROLL_IN_FADE ; Save direction to do a text fade.
+	ldy #0             ; and turn off the
+	sty SCROLL_DO_FADE ; direction from MAIN
+
+Do_Scroll_Fade_In_Progress
+	ldy SCROLL_IN_FADE ; Are we in a fade?
+	beq Do_Line_Scroll ; Nope. Go scroll lines.
+	dey                ; Was it 1 for Fade up? 
+	beq Do_Scroll_Fade_Up
+	; Therefore it must be 2 (or more, so what) 
+	; do fade down. 6 to 0
+	ldy SCROLL_CURRENT_FADE ; Get current fade
+	beq Fade_Finished       ; is it 0? Then stop fade.
+	dey                     ; decrement fade.
+	bpl Set_New_Fade        ; save new fade value
+
+Do_Scroll_Fade_Up
+	; do fade up. 0 to 6
+	ldy SCROLL_CURRENT_FADE ; Get current fade
+	cmp #6                  ; Did we reach the end already?
+	bne Do_Increment_Fade   ; Nope.
+	ldy #0                  ; At the end, so  
+	beq Fade_Finished       ; stop the fade.
+Do_Increment_Fade
+	iny                     ; increment fade.
+
+Set_New_Fade
+	sty SCROLL_CURRENT_FADE ; save for DLI.
+	bpl Do_Line_Scroll      ; continue by moving text window.
+
+Fade_Finished ; Code comes here when Y = 0 to stop the fade.
+	sty SCROLL_IN_FADE
+
+Do_Line_Scroll
+	ldy SCROLL_CURRENT_VSCROLL ; Get current fine scroll
+	iny                        ; Move starting scan line +1 to scroll text up
+	cmp #8                     ; Exceeded line limit?
+	bne Update_Current_Vscroll ; No. Just update new value
+
+	; Then it is time to Coarse scroll the entire window.
+	; First check if the current line has reached the limit. 
+	ldy SCROLL_CURRENT_LINE    ; Is current position
+	cpy SCROLL_MAX_LINES       ; at the end?
+	beq Restart_Scroll_Lines   ; Yes.  Reset to 0/first line.
+	iny                        ; No.  Increment line.
+	bpl Update_Scroll_Lines    ; Set new value
+
+Restart_Scroll_Lines
+	ldy #0                     ; Yes.  Reset to first line
+
+Update_Scroll_Lines
+	sty SCROLL_CURRENT_LINE   ; Y is the new starting line for the window.
+
+	lda SCROLL_BASE           ; Copy the base address of 
+	sta ZEROPAGE_POINTER_8    ; the text array/list into
+	lda SCROLL_BASE+1         ; Page 0.
+	sta ZEROPAGE_POINTER_8+1
+	
+	; Since this is an array of words multiply Y times 2.
+	tya ; Multiply starting line index * 2 for 
+	asl a ; table lookup.
+	tay
+
+	; Coarse scrolling the window.
+	; Copy 7 addresses from the scroll table 
+	; into the display list LMS instructions.
+	; X indexes instructions/LMS in Display list.
+	; Y indexes addresses from the text address table.
+	ldx #0
+Coarse_Scroll_Text_LMS
+	lda (ZEROPAGE_POINTER_8),y       ; Get Low Byte.
+	sta DISPLAY_LIST_TEXT_SCROLL_0,x ; Low Byte of LMS.
+	iny                              ; words.  next byte is high byte.
+	inx
+	lda (ZEROPAGE_POINTER_8),y       ; Get High Byte.
+	sta DISPLAY_LIST_TEXT_SCROLL_0,x ; High Byte of LMS.
+	iny                              ; words.  next byte is low byte.
+	inx                              ; FYI: X is now indexed to a Mode instruction.
+	inx                              ; Skip over Mode instruction. Next is the LMS low byte
+	cpx #21                          ; If this is not the end, 
+	bne Coarse_Scroll_Text_LMS       ; then do another address.
+	
+	ldy #0 ; reset Current fine scroll to first position 
+	
+Update_Current_Vscroll
+	sty SCROLL_CURRENT_VSCROLL
+	
+End_Credit_Prompt_Scroll
+
 
 ;===============================================================================
 ; PADDLE
@@ -905,3 +1043,9 @@ Push_Boom_1_To_Boom_2
 	sta BOOM_2_CYCLE_x
 
 	rts
+	
+	
+	
+	
+	
+	
