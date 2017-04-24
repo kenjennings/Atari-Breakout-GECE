@@ -2010,7 +2010,32 @@ GAMEOVER_LINE_TABLE_HI
 
 
 ;===============================================================================
-; CREDIT Scrolling table.
+; CREDIT AND PROMPT Scrolling tables.
+
+; State Controls
+
+ENABLE_CREDIT_SCROLL .byte 0 ; MAIN: Flag to stop/start scrolling/visible text
+SCROLL_DO_FADE .byte 0       ; MAIN: 0 = no fade.  1= fade up.  2 = fade down.
+SCROLL_TICK_DELAY .byte 0    ; MAIN: number of frames to delay per scroll step.
+SCROLL_BASE .word 0          ; MAIN: Base table to start scrolling
+SCROLL_MAX_LINES .byte 0     ; MAIN: number of lines in scroll before restart.
+
+SCROLL_CURRENT_TICK .byte 0    ; VBI: Current tick for delay, decrementing to 0.
+SCROLL_IN_FADE .byte 0         ; VBI: fade is in progress? 0 = no. 1 = up. 2 = down
+SCROLL_CURRENT_FADE .byte 0    ; VBI/DLI: VBI set for DLI - Current Fade Start position
+SCROLL_CURRENT_LINE .byte 0    ; VBI: increment for start line of window.
+SCROLL_CURRENT_VSCROLL .byte 0 ; VBI/DLI: VBI sets for DLI -- Current Fine Vertical Scroll vertical position. 
+
+; Scroll text has shading on first and last lines.
+; 6 values used at a time.
+; Incrementing CURRENT_FADE changes text from black/off to shaded up to white.
+; CURRENT_FADE should range from 0 to 6.
+; 0 is off.  6 is fully lit.
+; The DLI on the first line begins at SCROLL_CURRENT_FADE and reads 6 consecutive values for text brightness.
+SCROLL_FADE_START_LINE_TABLE .byte $0,$0,$0,$0,$0,$0,$2,$4,$6,$8,$a,$c
+; The DLI in the last line reads from SCROLL_CURRENT_FADE decrementing to 0 for text brightness.
+SCROLL_FADE_END_LINE_TABLE   .byte $0,$2,$4,$6,$8,$a,$c
+  
 ; Credits
 CREDIT_SCROLL_TABLE ; Addresses of text lines for scroll
 	.word CENTER_SCROLL_00 ; 1 Ten lines for empty screen.
