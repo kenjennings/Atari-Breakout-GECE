@@ -342,7 +342,7 @@ End_Title
 	ldx #3
 	lda #0
 	ldy BALL_CURRENT_Y
-	
+;	
 Erase_Current_Ball
 	sta PMADR_BASE0,y
 	iny
@@ -356,9 +356,9 @@ Erase_Current_Ball
 ; No ball. Leave in non-visible/off screen state.
 	lda #0
 	beq End_Ball_Update
-	
+;
+; Draw new image	
 Update_Ball	
-; Draw new image
 	ldx #3
 	lda #$C0 ; The Ball
 	ldy BALL_NEW_Y
@@ -373,6 +373,12 @@ Draw_New_Ball
 ; and set the next current position.
 	lda BALL_NEW_X
 	sta BALL_CURRENT_X
+;
+; and unicorn colorfy it.
+	lda RANDOM
+	and #$F0 ; random color
+	ora #$0F ; sparkle white it
+	sta BALL_COLOR
 
 End_Ball_Update	
 	sta BALL_HPOS ; And let the DLI know where to put it.
@@ -846,6 +852,7 @@ End_Boom_O_Matic
 
 ;===============================================================================
 ; SCROLL PROMPTS AND CREDITS
+;===============================================================================
 ; VBI manages text fade in/out, and 
 ; the vertical scroll up of the prompt or
 ; 
@@ -967,7 +974,7 @@ End_Credit_Prompt_Scroll
 
 ;===============================================================================
 ; PADDLE CONTROL
-
+;===============================================================================
 ; Positioning is very simple. Lookup potentiometer value in
 ; the table.  Set Player HPOS accordingly.
 
@@ -1022,6 +1029,7 @@ End_Paddle_Movement
 
 ;===============================================================================
 ; BALL COUNTER
+;===============================================================================
 ; Player 0 == Sine Wave Balls
 ; Player 1 == Sine Wave Balls
 ; Player 2 == Sine Wave Balls.
@@ -1036,6 +1044,7 @@ End_Paddle_Movement
 
 ;===============================================================================
 ; SCORE
+;===============================================================================
 ; Mode 6 color text for score.
 ; Color 2  == score
 ; Color 3  == score
