@@ -1,0 +1,64 @@
+100 Rem PDL2SCR.BXL
+105 Fast 
+110 Open #1,8,0,"H6:PDL2SCR.ASM"
+115 Rem GENERATE TABLE CONVERTING
+120 Rem POTENTIOMETER POSITION TO
+125 Rem SCREEN COORDINATES.
+130 Rem 
+135 Rem MINIMUM POT VALUE
+140 Potmin=0
+145 Rem MAXIMUM PADDLE VALUE
+150 Potmax=228
+155 Rem THIS MANY EXTRA LOW POT VALUES EQUALS MINIMUM
+160 Minbufr=1
+165 Rem THIS MANY EXTRA HIGH POT VALUES EQUALS MAXIMUM
+170 Maxbufr=1
+175 Rem MINIMUM SCREEN COORDINATES
+180 Rem MAXIMUM SCREEN COORDINATES
+185 Rem FOR REFERENCE:
+190 Rem LEFT_EDGE  = $30 LEFT-MOST COLOR CLOCK 
+195 Rem RIGHT_EDGE = $CF RIGHT-MOST COLOR CLOCK
+200 Rem BREAKOUT NORMAL PADDLE
+205 Rem MIN X = PLAYFIELD_LEFT_EDGE - 3
+210 Scrmin=$30-3
+215 Rem MAX X = PLAYFIELD_RIGHT_EDGE - 5
+220 Scrmax=$cf-5
+225 Rem BREAKOUT NARROW PADDLE
+230 Rem MIN X = PLAYFIELD_LEFT_EDGE
+235 Rem SCRMIN=$30
+240 Rem MAX X = PLAYFIELD_RIGHT_EDGE - 5
+245 Rem SCRMAX=$CF-5
+250 Rem 
+255 Byte=Scrmax
+260   If Maxbufr>0:Rem MAX VALUES
+265     For I=Potmax-Maxbufr To Potmax
+270     Gosub 350
+275     Next I
+280   Endif 
+285   For I=Scrmax To Scrmin Step -((Scrmax-Scrmin+1)/((Potmax-(Maxbufr+1))-(Potmin+Minbufr)))
+290   Byte=Int(I+0.5):Gosub 350
+295   Next I
+300 Byte=Scrmin
+305   If Minbufr>0:Rem MIN VALUES
+310     For I=Potmin To Potmin+Minbufr
+315     Gosub 350
+320     Next I
+325   Endif 
+330 ? #1
+335 Close #1
+340 End 
+345 Rem OUTPUT BYTE FOR ATASM
+350   If First=0:First=1
+355   ? #1;"PDL2SCR";
+360   Endif 
+365   If Linestart=0:Linestart=1
+370   Bytesout=0
+375   ? #1:? #1;"    .byte ";
+380   Endif 
+385 If Bytesout>0 Then ? #1;",";
+390 A$=Hex$(Byte)
+395 ? #1;"$";A$(3,4);
+400 ? A$(3,4):Rem ONE FOR THE SCREEN
+405 Bytesout=Bytesout+1
+410 If Bytesout=32 Then Linestart=0
+415 Return 
