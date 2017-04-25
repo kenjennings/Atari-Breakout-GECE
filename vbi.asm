@@ -966,7 +966,16 @@ End_Credit_Prompt_Scroll
 
 
 ;===============================================================================
-; PADDLE
+; PADDLE CONTROL
+
+; Positioning is very simple. Lookup potentiometer value in
+; the table.  Set Player HPOS accordingly.
+
+; The paddle reacts to ball proximity and strikes similar 
+; to the way the bumpers work.  MAIN sets the value.
+; distance == (PADDLE_Y - BALL_Y) / 4 only when Ball Y 
+; is less than/equal to Paddle Y. AND X is within a
+; 1 pixel limit of the paddle size.
 
 
 ;===============================================================================
@@ -1043,9 +1052,3 @@ Push_Boom_1_To_Boom_2
 	sta BOOM_2_CYCLE_x
 
 	rts
-	
-	
-	
-	
-	
-	
