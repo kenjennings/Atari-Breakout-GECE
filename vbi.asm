@@ -977,13 +977,71 @@ End_Credit_Prompt_Scroll
 ; is less than/equal to Paddle Y. AND X is within a
 ; 1 pixel limit of the paddle size.
 
+	lda ENABLE_PADDLE        ; Is Paddle enabled?
+	bne Do_Paddle_Movement   ; Yes. Animate it.
+	
+	ldy #0                   ; Tell DLI what it can do
+	sty PADDLE_HPOS          ; with the paddle.
+	iny                      ; Now its Frame 1, which....
+	sty PADDLE_FRAME         ; will trick the color animation routine
+	beq Check_Paddle_Anim    ; into restoring default color.
+	
+	; Set Paddle postion based on its size and 
+	; the value of the potentiometer.
+Do_Paddle_Movement
+	ldy PADDL0               ; POKEY Potentiometer
+	lda PADDLE_SIZE          ; MAIN set normal/small paddle size
+	beq Normal_Paddle
+	lda PADDLE_SMALL_POSITION_TABLE,y ; Convert POT to X HPOS
+	bne Update_Paddle_HPOS
+	
+Normal_Paddle
+	lda PADDLE_NORMAL_POSITION_TABLE,y ; Convert POT to X HPOS
+
+Update_Paddle_HPOS
+	sta PADDLE_HPOS
+	
+	; Animate color changes for Paddle Strike
+	lda PADDLE_STRIKE        ; Did MAIN signal paddle strike?
+	beq Check_Paddle_Anim    ; No.  But is there already an animation in progress?
+	lda #0
+	sta PADDLE_STRIKE        ; Turn off notification from MAIN.
+	lda #10                  ; Pretend prior VBI did the 10th 
+	sta PADDLE_FRAME         ; frame to restart animation.
+	
+Check_Paddle_Anim
+	ldy PADDLE_FRAME         ; Is color animation in progress?
+	beq End_Paddle_Movement  ; No. Exit.
+	dey                      ; Yes.  Move to next frame.
+	sty PADDLE_FRAME         ; Save new frame.
+	lda PADDLE_STRIKE_COLOR_FRAMES,y ; Get new color for frame.
+	sta PADDLE_STRIKE_COLOR          ; Set new color for DLI.
+	
+End_Paddle_Movement
+
 
 ;===============================================================================
 ; BALL COUNTER
+; Player 0 == Sine Wave Balls
+; Player 1 == Sine Wave Balls
+; Player 2 == Sine Wave Balls.
+; Player 3 == Sine Wave Balls
+; Missile 0 == Sine Wave Balls
+; Mode 6 color text for label.
+; Color 1  == "BALLS" 
+;-------------------------------------------
+
+
 
 
 ;===============================================================================
 ; SCORE
+; Mode 6 color text for score.
+; Color 2  == score
+; Color 3  == score
+;-------------------------------------------
+
+
 
 
 Exit_VBI
