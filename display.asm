@@ -54,7 +54,7 @@ BRICK_LINE_HEIGHT =   5    ; Actual drawn graphics scanlines.
 BRICK_HEIGHT =        7    ; including the following blank lines (used when multiplying for position) 
 
 
-; Player/missile Ball MIN/MAX travel areas.
+; Playfield MIN/MAX travel areas relative to the ball.
 ;
 MIN_PIXEL_X = PLAYFIELD_LEFT_EDGE_NORMAL+BRICK_LEFT_OFFSET
 MAX_PIXEL_X = MIN_PIXEL_X+152 ; Actual last color clock of last brick.
@@ -64,15 +64,50 @@ MAX_BALL_X =  MAX_PIXEL_X-1 ; because ball is 2 color clocks wide
 MIN_PIXEL_Y = 53 ; Top edge of the playfield.  just a guess right now.
 MAX_PIXEL_Y = 230 ; bottom edge after paddle.  lose ball here.
 
-
 ; Ball travel when bouncing from walls and bricks will simply negate 
 ; the current horizontal or vertical direction.
 ; Ball travel when bouncing off the paddle will require lookup tables
 ; to manage angle (and speed changes).
 
+
+; Playfield MIN/MAX travel areas relative to the Paddle.
+;
 ; Paddle travel is only horizontal. But the conversion from paddle 
 ; value (potentiometer) to paddle Player on screen will have different
 ; tables based on wide paddle and narrow paddle sizes.
+; The paddle also is allowed to travel beyond the left and right sides
+; of the playfield far enough that only an edge of the paddle is 
+; visible for collision on the playfield.
+; The size of the paddle varied the coordinates for this.
+;
+; Paddle limits:
+; O = Offscreen/not playfield
+; X = ignored playfield 
+; P = Playfield 
+; T = Paddle Pixels
+;
+; (Normal  Left)     (Normal Right)
+; OOOxxxPP           PPxxxxOOO 
+; TTTTTTTT           TTTTTTTT
+; MIN = Playfield left edge normal - 3
+; MAX = Playfield right edge - 5
+;
+; (Small  Left)     (Small Right)
+; OOOxxxPP           PPxxxxOOO 
+;    TTTTT           TTTTT
+; MIN = Playfield left edge normal
+; MAX = Playfield right edge - 5
+;
+PADDLE_NORMAL_MIN_X = PLAYFIELD_LEFT_EDGE_NORMAL-3
+PADDLE_NORMAL_MAX_X = PLAYFIELD_RIGHT_EDGE_NORMAL-5
+
+PADDLE_SMALL_MIN_X = PLAYFIELD_LEFT_EDGE_NORMAL
+PADDLE_SMALL_MAX_X = PLAYFIELD_RIGHT_EDGE_NORMAL-5
+
+; FYI:
+; PLAYFIELD_LEFT_EDGE_NORMAL  = $30 ; First/left-most color clock horizontal position
+; PLAYFIELD_RIGHT_EDGE_NORMAL = $CF ; Last/right-most color clock horizontal position
+
 
 
 
@@ -2224,4 +2259,65 @@ SUBTITLE_SCROLL_TABLE ; Addresses of text lines for scroll
 	.word CENTER_SCROLL_00 
 
 SUBTITLE_SCROLL_TABLE_SIZE=19  ; Address/words up to here, then loop around 	
+
+
+;===============================================================================
+; PADDLE CONTROL
+
+; Positioning is very simple. Lookup potentiometer value in
+; the table.  Set Player HPOS accordingly.
+
+PADDLE_SIZE .byte 0 ; Paddle Size  0 = Normal.  1 = Small.
+
+; Convert Potentiometer value to Paddle screen position.
+
+PADDLE_NORMAL_POSITION_TABLE ; 228 bytes of HPOS coordinates corresponding to paddle values
+    .byte $CA,$CA,$CA,$C9,$C9,$C8,$C7,$C6,$C6,$C5,$C4,$C4,$C3,$C2,$C2,$C1,$C0,$BF,$BF,$BE,$BD,$BD,$BC,$BB,$BB,$BA,$B9,$B8,$B8,$B7,$B6,$B6
+    .byte $B5,$B4,$B4,$B3,$B2,$B1,$B1,$B0,$AF,$AF,$AE,$AD,$AD,$AC,$AB,$AA,$AA,$A9,$A8,$A8,$A7,$A6,$A5,$A5,$A4,$A3,$A3,$A2,$A1,$A1,$A0,$9F
+    .byte $9E,$9E,$9D,$9C,$9C,$9B,$9A,$9A,$99,$98,$97,$97,$96,$95,$95,$94,$93,$93,$92,$91,$90,$90,$8F,$8E,$8E,$8D,$8C,$8C,$8B,$8A,$89,$89
+    .byte $88,$87,$87,$86,$85,$84,$84,$83,$82,$82,$81,$80,$80,$7F,$7E,$7D,$7D,$7C,$7B,$7B,$7A,$79,$79,$78,$77,$76,$76,$75,$74,$74,$73,$72
+    .byte $72,$71,$70,$6F,$6F,$6E,$6D,$6D,$6C,$6B,$6A,$6A,$69,$68,$68,$67,$66,$66,$65,$64,$63,$63,$62,$61,$61,$60,$5F,$5F,$5E,$5D,$5C,$5C
+    .byte $5B,$5A,$5A,$59,$58,$58,$57,$56,$55,$55,$54,$53,$53,$52,$51,$51,$50,$4F,$4E,$4E,$4D,$4C,$4C,$4B,$4A,$49,$49,$48,$47,$47,$46,$45
+    .byte $45,$44,$43,$42,$42,$41,$40,$40,$3F,$3E,$3E,$3D,$3C,$3B,$3B,$3A,$39,$39,$38,$37,$37,$36,$35,$34,$34,$33,$32,$32,$31,$30,$30,$2F
+    .byte $2E,$2D,$2D,$2D
+
+PADDLE_SMALL_POSITION_TABLE ; 228 bytes of HPOS coordinates corresponding to paddle values
+    .byte $CA,$CA,$CA,$C9,$C9,$C8,$C7,$C7,$C6,$C5,$C4,$C4,$C3,$C2,$C2,$C1,$C0,$C0,$BF,$BE,$BE,$BD,$BC,$BC,$BB,$BA,$B9,$B9,$B8,$B7,$B7,$B6
+    .byte $B5,$B5,$B4,$B3,$B3,$B2,$B1,$B1,$B0,$AF,$AE,$AE,$AD,$AC,$AC,$AB,$AA,$AA,$A9,$A8,$A8,$A7,$A6,$A5,$A5,$A4,$A3,$A3,$A2,$A1,$A1,$A0
+    .byte $9F,$9F,$9E,$9D,$9D,$9C,$9B,$9A,$9A,$99,$98,$98,$97,$96,$96,$95,$94,$94,$93,$92,$92,$91,$90,$8F,$8F,$8E,$8D,$8D,$8C,$8B,$8B,$8A
+    .byte $89,$89,$88,$87,$86,$86,$85,$84,$84,$83,$82,$82,$81,$80,$80,$7F,$7E,$7E,$7D,$7C,$7B,$7B,$7A,$79,$79,$78,$77,$77,$76,$75,$75,$74
+    .byte $73,$73,$72,$71,$70,$70,$6F,$6E,$6E,$6D,$6C,$6C,$6B,$6A,$6A,$69,$68,$67,$67,$66,$65,$65,$64,$63,$63,$62,$61,$61,$60,$5F,$5F,$5E
+    .byte $5D,$5C,$5C,$5B,$5A,$5A,$59,$58,$58,$57,$56,$56,$55,$54,$54,$53,$52,$51,$51,$50,$4F,$4F,$4E,$4D,$4D,$4C,$4B,$4B,$4A,$49,$48,$48
+    .byte $47,$46,$46,$45,$44,$44,$43,$42,$42,$41,$40,$40,$3F,$3E,$3D,$3D,$3C,$3B,$3B,$3A,$39,$39,$38,$37,$37,$36,$35,$35,$34,$33,$32,$32
+    .byte $31,$30,$30,$30
+
+; CURRENT STATE:
+; Paddle is made of several Player objects providing 
+; additional horizontal color.  A DLI makes vertical 
+; shading in the main colors.
+
+; FUTURE ENHANCEMENT:
+; The paddle reacts to ball proximity and strikes similar 
+; to the way the bumpers work.  MAIN sets the value.
+; distance == (PADDLE_Y - BALL_Y) / 4 only when Ball Y 
+; is less than/equal to Paddle Y. AND X is within a
+; 1 pixel limit of the paddle size.
+
+PADDLE_PROXIMITY .byte $09 
+;
+; VBI maintains animation frames
+;
+PADDLE_FRAME_LIMIT .byte 12 ; at 12 return to 0
+;
+; VBI sets colors, and DLI sets them on screen.
+;
+PADDLE_COLOR .byte 0
+
+; VBI sets the color of the paddle based on 
+; the distance of the ball determined by the MAIN
+; routine where distance == 
+; for Y is ABS((PADDLE_Y - BALL_Y)) / 4  
+; greater than 8 is color $00
+PADDLE_PROXIMITY_COLOR
+	.byte $0E,$7E,$7C,$7A,$78,$76,$74,$72,$70,$00
 
