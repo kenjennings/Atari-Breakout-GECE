@@ -625,14 +625,14 @@ THUMPER_FRAME5
 	; Scan line 205-212, screen line 198-205,   Eight blank scan lines (top 4 are paddle)	
 
 ;-------------------------------------------
-; TITLE SECTION: NORMAL
-; Player 0 == Talking ball text.
-; Player 1 == Talking ball text.
-; Player 2 == Talking ball text.
-; Player 3 == Talking Ball Text.
-; Player 5 == Talking Ball text.
-; Mode 6 color text for ball list and score.
-; Color 1  == Talking Balls. 
+; SCORE SECTION: NORMAL
+; Player 0 == Sine Wave Balls
+; Player 1 == Sine Wave Balls
+; Player 2 == Sine Wave Balls.
+; Player 3 == Sine Wave Balls
+; Missile 0 == Sine Wave Balls
+; Mode 6 color text for score.
+; Color 1  == "BALLS" 
 ; Color 2  == score
 ; Color 3  == score
 ;-------------------------------------------
@@ -641,7 +641,7 @@ THUMPER_FRAME5
 ; HPOSM0, HPOSM1, HPOSM2, HPOSM3 
 ; SIZEP0, SIZEP1, SIZEP2, SIZEP3, SIZEM
 ; CHBASE
-; HSCROLL
+; HSCROLL?
 ;-------------------------------------------
 ; Ball counter and score
 	; Scan line 213-220, screen line 206-213,   Mode 6 text, scrolling
@@ -1845,6 +1845,42 @@ BALL_YPOS_TO_BRICK_TABLE
 	.byte 8,8,8,8,8
 
 
+; Other "BRICKS" things...
+;
+; Pointers to data to draw the Title screen logo
+;
+LOGO_LINE_TABLE_LO
+	entry .= 0
+	.rept 8 ; repeat for 8 rows
+	.byte <[LOGO_LINE0+[entry*19]]
+	entry .= entry+1 ; next entry in table.
+	.endr
+	
+LOGO_LINE_TABLE_HI
+	entry .= 0
+	.rept 8 ; repeat for 8 rows
+	.byte >[LOGO_LINE0+[entry*19]]
+	entry .= entry+1 ; next entry in table.
+	.endr
+;
+; Pointers to data to draw the Game Over screen
+;
+GAMEOVER_LINE_TABLE_LO
+	entry .= 0
+	.rept 8 ; repeat for 8 rows
+	.byte <[GAMEOVER_LINE0+[entry*16]]
+	entry .= entry+1 ; next entry in table.
+	.endr
+
+GAMEOVER_LINE_TABLE_HI
+	entry .= 0
+	.rept 8 ; repeat for 8 rows
+	.byte >[GAMEOVER_LINE0+[entry*16]]
+	entry .= entry+1 ; next entry in table.
+	.endr
+
+
+
 ;===============================================================================
 ; BOOM-O-MATIC.
 ;===============================================================================
@@ -1930,9 +1966,9 @@ BOOM_ANIMATION_FRAMES ; 7 bytes of Player image data per each cycle frame -- 8th
 	.byte $00,$00,$00,$C0,$00,$00,$00,$00,$00 ; 1 scan line, 2 bits * 1 color clocks == 2 color clocks.   ; 8
 	.byte $00,$00,$00,$00,$00,$00,$00,$00,$00 ; 0 scan line, 0 bits * 0 color clocks == 0 color clocks.   ; 9
 
-; ==============================================================
+;==============================================================
 ; BALL:
-; ==============================================================
+;==============================================================
 ; Very simple.  
 ; MAIN code analyzes CURRENT position of the ball to set the NEW postion.
 ; VBI code updates the Player image and sets NEW as CURRENT.
@@ -1947,6 +1983,8 @@ BALL_HPOS .byte 0 ; this lets VBI tell DLI to remove from screen without zeroing
 
 BALL_NEW_X .byte 0 ; DLI sets HPOSP0
 BALL_NEW_Y .byte 0 ; VBI moves image
+
+BALL_COLOR .byte $0E ; and color.  anways bright.
 
 
 ;===============================================================================
@@ -2007,45 +2045,12 @@ BALL_Y_STEPS
 	.byte 1,1,1,0 ; 5 +3
 	
 
-; 
-
-;
-; Pointers to data to draw the Title screen logo
-;
-LOGO_LINE_TABLE_LO
-	entry .= 0
-	.rept 8 ; repeat for 8 rows
-	.byte <[LOGO_LINE0+[entry*19]]
-	entry .= entry+1 ; next entry in table.
-	.endr
-	
-LOGO_LINE_TABLE_HI
-	entry .= 0
-	.rept 8 ; repeat for 8 rows
-	.byte >[LOGO_LINE0+[entry*19]]
-	entry .= entry+1 ; next entry in table.
-	.endr
-;
-; Pointers to data to draw the Game Over screen
-;
-GAMEOVER_LINE_TABLE_LO
-	entry .= 0
-	.rept 8 ; repeat for 8 rows
-	.byte <[GAMEOVER_LINE0+[entry*16]]
-	entry .= entry+1 ; next entry in table.
-	.endr
-
-GAMEOVER_LINE_TABLE_HI
-	entry .= 0
-	.rept 8 ; repeat for 8 rows
-	.byte >[GAMEOVER_LINE0+[entry*16]]
-	entry .= entry+1 ; next entry in table.
-	.endr
 
 
 
 ;===============================================================================
 ; CREDIT AND PROMPT Scrolling tables.
+;===============================================================================
 
 ; State Controls
 
@@ -2263,14 +2268,38 @@ SUBTITLE_SCROLL_TABLE_SIZE=19  ; Address/words up to here, then loop around
 
 ;===============================================================================
 ; PADDLE CONTROL
+;===============================================================================
+; Paddle is built of Players 1, 2, and 3 to provide a 
+; little extra horizontal detail/coloring.
+; Use Players 1+2 multi-color for more color.
+; 1 = $94
+; 2 = $98
+; X = 1+1 = $9C
+; 3 = $7E ? 
+;
+; DLI recolors top line of COLPM1 for strike animation.
+;
+;Normal:
+;
+; 33111133 = 33....33 + ........ + ..1111..
+; 3X2112X3 = 3......3 + .22..22. + .1.11.1.
+; X211112X = ........ + 22....22 + 1.1111.1
+;  221122  = ........ + .22..22. + ...11...
+; 
+; Small:
+;
+; 33111133 = 33....33 + ........ + ..1111..
+; 3X2112X3 = 3......3 + .22..22. + .1.11.1.
+; X211112X = ........ + 22....22 + 1.1111.1
+;  221122  = ........ + .22..22. + ...11...
+;   
+ENABLE_PADDLE .byte 0 ; Paddle displayed on screen?  0 = no.  1 = yes.
 
-; Positioning is very simple. Lookup potentiometer value in
-; the table.  Set Player HPOS accordingly.
-
-PADDLE_SIZE .byte 0 ; Paddle Size  0 = Normal.  1 = Small.
-
+; MAIN sets paddle image.  VBI set HPOS based on size.
+PADDLE_SIZE .byte 0 ; MAIN to VBI: Paddle Size  0 = Normal. 1 = Small.
+;
 ; Convert Potentiometer value to Paddle screen position.
-
+;
 PADDLE_NORMAL_POSITION_TABLE ; 228 bytes of HPOS coordinates corresponding to paddle values
     .byte $CA,$CA,$CA,$C9,$C9,$C8,$C7,$C6,$C6,$C5,$C4,$C4,$C3,$C2,$C2,$C1,$C0,$BF,$BF,$BE,$BD,$BD,$BC,$BB,$BB,$BA,$B9,$B8,$B8,$B7,$B6,$B6
     .byte $B5,$B4,$B4,$B3,$B2,$B1,$B1,$B0,$AF,$AF,$AE,$AD,$AD,$AC,$AB,$AA,$AA,$A9,$A8,$A8,$A7,$A6,$A5,$A5,$A4,$A3,$A3,$A2,$A1,$A1,$A0,$9F
@@ -2290,6 +2319,18 @@ PADDLE_SMALL_POSITION_TABLE ; 228 bytes of HPOS coordinates corresponding to pad
     .byte $5D,$5C,$5C,$5B,$5A,$5A,$59,$58,$58,$57,$56,$56,$55,$54,$54,$53,$52,$51,$51,$50,$4F,$4F,$4E,$4D,$4D,$4C,$4B,$4B,$4A,$49,$48,$48
     .byte $47,$46,$46,$45,$44,$44,$43,$42,$42,$41,$40,$40,$3F,$3E,$3D,$3D,$3C,$3B,$3B,$3A,$39,$39,$38,$37,$37,$36,$35,$35,$34,$33,$32,$32
     .byte $31,$30,$30,$30
+;
+; That may be a pretty stupid thing to do.  It is almost 1/2K of 
+; code blight stuff just to map the potentiomenter rotation to 
+; the screen.  If the movement is dodgy then this is going to be 
+; replaced by the simple version:
+; Clip min/max potentiomter values to the min/max screen positions.
+
+;	
+; Positioning is very simple. Lookup potentiometer value in
+; the table.  Set Player HPOS accordingly.
+;
+PADDLE_HPOS .byte 0 ; VBI to DLI: X position of Player(s) making up paddle.
 
 ; CURRENT STATE:
 ; Paddle is made of several Player objects providing 
@@ -2303,21 +2344,41 @@ PADDLE_SMALL_POSITION_TABLE ; 228 bytes of HPOS coordinates corresponding to pad
 ; is less than/equal to Paddle Y. AND X is within a
 ; 1 pixel limit of the paddle size.
 
-PADDLE_PROXIMITY .byte $09 
+;
+; MAIN signals Paddle strike
+;
+PADDLE_STRIKE .byte $00 
 ;
 ; VBI maintains animation frames
 ;
-PADDLE_FRAME_LIMIT .byte 12 ; at 12 return to 0
+PADDLE_FRAME .byte 0 ; 9 to 0 
 ;
-; VBI sets colors, and DLI sets them on screen.
+; VBI sets the color of the top line of the paddle 
+; (COLPM1) when the MAIN signals that the paddle 
+; was struck.  9 to 0
 ;
-PADDLE_COLOR .byte 0
+PADDLE_STRIKE_COLOR_ANIM
+	.byte $94,$84,$72,$74,$76,$78,$7A,$7C,$7E,$0E
+;
+; VBI chooses color, and DLI sets them on screen.
+;
+PADDLE_STRIKE_COLOR .byte $94
 
-; VBI sets the color of the paddle based on 
-; the distance of the ball determined by the MAIN
-; routine where distance == 
-; for Y is ABS((PADDLE_Y - BALL_Y)) / 4  
-; greater than 8 is color $00
-PADDLE_PROXIMITY_COLOR
-	.byte $0E,$7E,$7C,$7A,$78,$76,$74,$72,$70,$00
+
+;===============================================================================
+; BALL COUNTER
+;===============================================================================
+; Can't really think of something clever.  Just need an indicator
+; for number of balls displayed.  Thought about animated faces for
+; the balls, but that make the counters about 20 times bigger than
+; the actual game balls.  All it needs is a color.
+;
+BALL_COUNTER .byte 0 ; How many game balls remaining?
+
+
+
+
+;===============================================================================
+; SCORE
+;===============================================================================
 
