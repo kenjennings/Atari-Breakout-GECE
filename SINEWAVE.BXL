@@ -1,0 +1,37 @@
+100 Rem SINEWAVE.BXL
+105 Fast 
+110 Open #1,8,0,"H6:SINEWAVE.ASM"
+115 Rem GENERATE TABLE OF SINE
+120 Rem WAVE VALUES. 
+125 Rem 
+130 Rem AMPLITUDE
+135 Amplitude=6
+140 Rem ADJUSTMENT
+145 Adjustment=219+5
+150 Rem NUMBER OF VALUES TO GENERATE
+155 Values=15
+160 Deg 
+165   For I=0 To 360 Step 360/Values
+170   Byte=Int((Sin(I)*Amplitude)+Adjustment+0.5)
+175   Gosub 205
+180   Next I
+185 ? #1
+190 Close #1
+195 End 
+200 Rem OUTPUT BYTE FOR ATASM
+205 If Totalcount=Values Then Return 
+210 Totalcount=Totalcount+1
+215   If First=0:First=1
+220   ? #1;"SINEWAVE";
+225   Endif 
+230   If Linestart=0:Linestart=1
+235   Bytesout=0
+240   ? #1:? #1;"    .byte ";
+245   Endif 
+250 If Bytesout>0 Then ? #1;",";
+255 A$=Hex$(Byte)
+260 ? #1;"$";A$(3,4);
+265 ? A$(3,4):Rem ONE FOR THE SCREEN
+270 Bytesout=Bytesout+1
+275 If Bytesout=16 Then Linestart=0
+280 Return 
