@@ -2368,17 +2368,77 @@ PADDLE_STRIKE_COLOR .byte $94
 ;===============================================================================
 ; BALL COUNTER
 ;===============================================================================
-; Can't really think of something clever.  Just need an indicator
+; Could not think of something clever for a while.  Just need an indicator
 ; for number of balls displayed.  Thought about animated faces for
 ; the balls, but that make the counters about 20 times bigger than
-; the actual game balls.  All it needs is a color.
+; the actual game balls.
 ;
-BALL_COUNTER .byte 0 ; How many game balls remaining?
-
-
+; Finally settled on using the P/Ms as counters showing balls the same 
+; size of the game ball, and bouncing up and down in a sine wave.
+;
+ENABLE_BALL_COUNTER .byte 0
+;
+; How many game balls remaining?  5 max.
+;
+BALL_COUNTER .byte 0 
+;
+; Don't need 60fps bounce.
+;
+SINE_WAVE_DELAY .byte 0 
+;
+; animation state for each ball, 5 max
+;
+BALL_COUNTER_SINE_STATE
+	.byte 0,3,6,9,12 
+;
+; Player position for each ball.
+;
+BALL_COUNTER_HPOS 
+	.byte $36,$3a,$3e,$42,$46 
+;
+; They all share another random unicorn sparkle.
+;
+BALL_COUNTER_COLOR 
+	.byte 0
+;
+; Vertical positions in Player memory map.
+;
+SINEWAVE
+    .byte $E0,$E2,$E4,$E6,$E6,$E5,$E4,$E1,$DF,$DC,$DB,$DA,$DA,$DC,$DE
 
 
 ;===============================================================================
 ; SCORE
 ;===============================================================================
+; If the displayed score is different from the internal (official) 
+; score, then the displayed Score is incremented by 1 (with sound effects)
+; once every 10 frames.
+;
+; Trying to keep the score math simple.  Each digit on screen is 
+; managed by one byte in memory counting 0 to 9. (Use BCD mode?)
+;
+; Yes, 12 digits is totally ridiculous.  But most people could not sustain
+; a game to 1,000,000,000,000 points, so there is little chance of rollover.
+;
+;
+ENABLE_SCORE .byte 0
+
+DISPLAYED_SCORE
+	.byte 0,0,0,0,0,0,0,0,0,0,0,0
+;
+; Number of digits actually populated
+;
+DISPLAYED_SCORE_DIGITS
+	.byte 0
+;
+REAL_SCORE
+	.byte 0,0,0,0,0,0,0,0,0,0,0,0
+;
+REAL_SCORE_DIGITS
+	.byte 0
+;
+; Count about 10 frames between visible score updates.
+;
+SCORE_INCREMENT_FRAME_DELAY
+	.byte $0A
 
