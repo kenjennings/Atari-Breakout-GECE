@@ -803,10 +803,11 @@ DISPLAY_LIST_TEXT_SCROLL_7
 	; Mode 6 seems like fun, again. Center the 12 lines of custom 
 	; character set in the middle of these 16.
 	; Scan line 213-220, screen line 206-213,   Mode 6 text, scrolling
-	.byte DL_TEXT_6|DL_LMS|DL_HSCROLL
+	.byte DL_TEXT_6|DL_LMS
+DISPLAY_LIST_SCORE_LMS	
 	.word SCORE_LINE0
 	; Scan line 221-228, screen line 214-221,   Mode 6 text, scrolling
-	.byte DL_TEXT_6|DL_LMS|DL_HSCROLL
+	.byte DL_TEXT_6|DL_LMS
 	.word SCORE_LINE1
 
 	; Scan line 229-229, screen line 222-222,   One blank scan line
@@ -838,8 +839,8 @@ DISPLAY_LIST_TEXT_SCROLL_7
 ; mode 6 title text:  B R E A K O U T
 
 ; Common lines for center scroll
-CENTER_SCROLL_00	.sbyte "                                " 	
-CENTER_SCROLL_01	.sbyte "          - - + - -             " 
+CENTER_SCROLL_00 .sbyte "                                " 	
+CENTER_SCROLL_01 .sbyte "          - - + - -             " 
 
 ; SubTitle on Logo Screen.
 SUBTITLE_01	.sbyte "        B R E A K O U T         " ; 
@@ -850,90 +851,90 @@ SUBTITLE_04	.sbyte "            Edition             " ;
 ; Prompts for the center scrolling window.
 PROMPT_LINES
 	;                                         ; repeat common 00 for lines to empty the scroll window
-PROMPT_01	.sbyte "  Press   F I R E   to continue " ; 1
+PROMPT_01 .sbyte "  Press   F I R E   to continue " ; 1
 	;                                         ; repeat common 00 for lines to empty the scroll window
 
 ; Credits for center scrolling window.  
 CREDIT_LINES
 	;                                         ; repeat common 00 for lines to empty the scroll window
-CREDIT_01	.sbyte "Breakout Arcade                 " ; 1
-CREDIT_02	.sbyte "-- ( 1976 )                     " ; 2
+CREDIT_01 .sbyte "Breakout Arcade                 " ; 1
+CREDIT_02 .sbyte "-- ( 1976 )                     " ; 2
 	;                                         ; repeat common 00
-CREDIT_03	.sbyte "Conceptualized by Nolan Bushnell" ; 3
-CREDIT_04	.sbyte "and Steve Bristow.              " ; 4
-CREDIT_05	.sbyte "Built by Steve Wozniak.         " ; 5
-CREDIT_06	.sbyte "https://en.wikipedia.org/...    " ; 6
-CREDIT_07	.sbyte "...wiki/Breakout_(video_game)   " ; 7
+CREDIT_03 .sbyte "Conceptualized by Nolan Bushnell" ; 3
+CREDIT_04 .sbyte "and Steve Bristow.              " ; 4
+CREDIT_05 .sbyte "Built by Steve Wozniak.         " ; 5
+CREDIT_06 .sbyte "https://en.wikipedia.org/...    " ; 6
+CREDIT_07 .sbyte "...wiki/Breakout_(video_game)   " ; 7
 	;                                         ; repeat common 00
 	;            - - + - -                    ; repeat common 01
 	;                                         ; repeat common 00
-CREDIT_08	.sbyte "C64 Breakout clone              " ; 8 C64 Breakout clone
-CREDIT_09	.sbyte "-- ( 2016 )                     " ; 9
+CREDIT_08 .sbyte "C64 Breakout clone              " ; 8 C64 Breakout clone
+CREDIT_09 .sbyte "-- ( 2016 )                     " ; 9
 	;                                         ; repeat common 00
-CREDIT_10	.sbyte "Written by Darren Du Vall       " ; 10
-CREDIT_11	.sbyte "aka Sausage-Toes                " ; 11
-CREDIT_12	.sbyte "Source at:                      " ; 12 source at
-CREDIT_13	.sbyte "Github: https://github.com/     " ; 13 github
-CREDIT_14	.sbyte "Sausage-Toes/C64_Breakout       " ; 14
+CREDIT_10 .sbyte "Written by Darren Du Vall       " ; 10
+CREDIT_11 .sbyte "aka Sausage-Toes                " ; 11
+CREDIT_12 .sbyte "Source at:                      " ; 12 source at
+CREDIT_13 .sbyte "Github: https://github.com/     " ; 13 github
+CREDIT_14 .sbyte "Sausage-Toes/C64_Breakout       " ; 14
 	;                                         ; repeat common 00
 	;            - - + - -                    ; repeat common 01
 	;                                         ; repeat common 00
 	;       .sbyte "C64 Breakout clone              " ; repeat 8 C64 Breakout clone
-CREDIT_15	.sbyte "ported to Atari 8-bit           " ; 15
-CREDIT_16	.sbyte -- ( 2017 )                      " ; 16 -- 2017
+CREDIT_15 .sbyte "ported to Atari 8-bit           " ; 15
+CREDIT_16 .sbyte -- ( 2017 )                      " ; 16 -- 2017
 	;                                         ; repeat common 00
-CREDIT_17	.sbyte "Atari-fied by Ken Jennings      " ; 17
-CREDIT_18	.sbyte "Built for Atari using eclipse,  " ; 18 built 1
-CREDIT_19	.sbyte "wudsn, and atasm on linux.      " ; 19 built 2
-	;       .sbyte "Source at:                      " ; repeat 12 source at
-	;       .sbyte "Github: https://github.com/     " ; repeat 13 github
-CREDIT_20	.sbyte "kenjennings/C64-Breakout-...    " ; 20
-CREDIT_21	.sbyte "...for-Atari                    " ; 21 for atari
-CREDIT_22	.sbyte "Google Drive:                   " ; 22 google drive 1
-CREDIT_23	.sbyte "https://drive.google.com/...    " ; 23 google drive 2
-CREDIT_24	.sbyte "...drive/folders/...            " ; 24 google drive 3
-CREDIT_25	.sbyte "...0B2m-YU97EHFESGVkTXp3WUdKUGM " ; 25
-	;                                         ; repeat common 00
-	;            - - + - -                    ; repeat common 01
-	;                                         ; repeat common 00
-CREDIT_26	.sbyte "Breakout:                       " ; 26
-CREDIT_27	.sbyte "Gratuitous Eye Candy Edition    " ; 27
-	;       .sbyte "-- ( 2017 )                     " ; repeat 16 -- 2017
-	;                                         ; repeat common 00
-CREDIT_28	.sbyte "Written by Ken Jennings         " ; 28
-	;       .sbyte "Built for Atari using eclipse,  " ; repeat 18 built 1
-	;       .sbyte "wudsn, and atasm on linux.      " ; repeat 19 built 1
-	;       .sbyte "Source at:                      " ; repeat 12 source at
-	;       .sbyte "Github: https://github.com/     " ; repeat 13 github
-CREDIT_29	.sbyte "kenjennings/Breakout-GECE-...   " ; 29
-	;       .sbyte "...for-Atari                    " ; repeat 21 for Atari
-	;       .sbyte "Google Drive:                   " ; repeat 22 google drive 1
-	;       .sbyte "https://drive.google.com/...    " ; repeat 23 google drive 2
-	;       .sbyte "...drive/folders/...            " ; repeat 24 google drive 3
-CREDIT_30	.sbyte "...                             " ; 30
+CREDIT_17 .sbyte "Atari-fied by Ken Jennings      " ; 17
+CREDIT_18 .sbyte "Built for Atari using eclipse,  " ; 18 built 1
+CREDIT_19 .sbyte "wudsn, and atasm on linux.      " ; 19 built 2
+	;     .sbyte "Source at:                      " ; repeat 12 source at
+	;     .sbyte "Github: https://github.com/     " ; repeat 13 github
+CREDIT_20 .sbyte "kenjennings/C64-Breakout-...    " ; 20
+CREDIT_21 .sbyte "...for-Atari                    " ; 21 for atari
+CREDIT_22 .sbyte "Google Drive:                   " ; 22 google drive 1
+CREDIT_23 .sbyte "https://drive.google.com/...    " ; 23 google drive 2
+CREDIT_24 .sbyte "...drive/folders/...            " ; 24 google drive 3
+CREDIT_25 .sbyte "...0B2m-YU97EHFESGVkTXp3WUdKUGM " ; 25
 	;                                         ; repeat common 00
 	;            - - + - -                    ; repeat common 01
 	;                                         ; repeat common 00
-CREDIT_31	.sbyte "Ken Jennings                    " ; 31
-CREDIT_32	.sbyte "-- ( 1966 )                     " ; 32
+CREDIT_26 .sbyte "Breakout:                       " ; 26
+CREDIT_27 .sbyte "Gratuitous Eye Candy Edition    " ; 27
+	;     .sbyte "-- ( 2017 )                     " ; repeat 16 -- 2017
 	;                                         ; repeat common 00
-CREDIT_33	.sbyte "Produced by Mr and Mrs Jennings " ; 33
+CREDIT_28 .sbyte "Written by Ken Jennings         " ; 28
+	;     .sbyte "Built for Atari using eclipse,  " ; repeat 18 built 1
+	;     .sbyte "wudsn, and atasm on linux.      " ; repeat 19 built 1
+	;     .sbyte "Source at:                      " ; repeat 12 source at
+	;     .sbyte "Github: https://github.com/     " ; repeat 13 github
+CREDIT_29 .sbyte "kenjennings/Breakout-GECE-...   " ; 29
+	;     .sbyte "...for-Atari                    " ; repeat 21 for Atari
+	;     .sbyte "Google Drive:                   " ; repeat 22 google drive 1
+	;     .sbyte "https://drive.google.com/...    " ; repeat 23 google drive 2
+	;     .sbyte "...drive/folders/...            " ; repeat 24 google drive 3
+CREDIT_30 .sbyte "...                             " ; 30
 	;                                         ; repeat common 00
-CREDIT_34	.sbyte "               ;-)              " ; 34	
+	;            - - + - -                    ; repeat common 01
 	;                                         ; repeat common 00
-CREDIT_35	.sbyte "in an amazing and wonderful     " ; 35
-CREDIT_36	.sbyte "universe made by an infinite God" ; 36
-CREDIT_37	.sbyte "-- ( infinity )                       " ; 37
+CREDIT_31 .sbyte "Ken Jennings                    " ; 31
+CREDIT_32 .sbyte "-- ( 1966 )                     " ; 32
 	;                                         ; repeat common 00
-CREDIT_38	.sbyte "   The Son is the radiance of   " ; 38
-CREDIT_39	.sbyte "    GOD's glory and the exact   " ; 39
-CREDIT_40	.sbyte "  representation of his being,  " ; 40 
-CREDIT_41	.sbyte "  sustaining all things by his  " ; 41
-CREDIT_42	.sbyte "  powerful word. After he had   " ; 42
-CREDIT_43	.sbyte " provided purification for sins," ; 43
-CREDIT_44	.sbyte "  he sat down at the right hand " ; 44
-CREDIT_45	.sbyte "    of the Majesty in heaven.   " ; 45
-CREDIT_46	.sbyte "-- Hebrews 1:3                  " ; 46
+CREDIT_33 .sbyte "Produced by Mr and Mrs Jennings " ; 33
+	;                                         ; repeat common 00
+CREDIT_34 .sbyte "               ;-)              " ; 34	
+	;                                         ; repeat common 00
+CREDIT_35 .sbyte "in an amazing and wonderful     " ; 35
+CREDIT_36 .sbyte "universe made by an infinite God" ; 36
+CREDIT_37 .sbyte "-- ( infinity )                       " ; 37
+	;                                         ; repeat common 00
+CREDIT_38 .sbyte "   The Son is the radiance of   " ; 38
+CREDIT_39 .sbyte "    GOD's glory and the exact   " ; 39
+CREDIT_40 .sbyte "  representation of his being,  " ; 40 
+CREDIT_41 .sbyte "  sustaining all things by his  " ; 41
+CREDIT_42 .sbyte "  powerful word. After he had   " ; 42
+CREDIT_43 .sbyte " provided purification for sins," ; 43
+CREDIT_44 .sbyte "  he sat down at the right hand " ; 44
+CREDIT_45 .sbyte "    of the Majesty in heaven.   " ; 45
+CREDIT_46 .sbyte "-- Hebrews 1:3                  " ; 46
 	;                                         ; repeat common 00
 	;            - - + - -                    ; repeat common 01
 	; Repeat 00 to scroll credits off....5, 6, 7 lines?
@@ -2284,14 +2285,14 @@ SUBTITLE_SCROLL_TABLE_SIZE=19  ; Address/words up to here, then loop around
 ; 33111133 = 33....33 + ........ + ..1111..  == $C3 + $00 + $3C
 ; 3X2112X3 = 3......3 + .22..22. + .1.11.1.  == $81 + $66 + $5A
 ; X211112X = ........ + 22....22 + 1.1111.1  == $00 + $C3 + $BD
-;  221122  = ........ + .22..22. + ...11...  == $00 + $66 + $18
+; .221122. = ........ + .22..22. + ...11...  == $00 + $66 + $18
 ; 
 ; Small:
 ;
-; 33133 = 33....33 + ........ + ..1111..  ==
-; 3X2X3 = 3......3 + .22..22. + .1.11.1.  == 
-; X212X = ........ + 22....22 + 1.1111.1  == 
-;  222  = ........ + .22..22. + ...11...  == 
+; 33133... = 33.33... + ........ + ..1.....  == $D8 + $00 + $20
+; 3X2X3... = 3...3... + .222.... + .1.1....  == $44 + $70 + $50
+; X212X... = ........ + 22.22... + 1.1.1...  == $00 + $D8 + $A8
+; .222.... = ........ + .222.... + ........  == $00 + $70 + $00
 ;   
 ENABLE_PADDLE .byte 0 ; Paddle displayed on screen?  0 = no.  1 = yes.
 
@@ -2376,11 +2377,45 @@ PADDLE_STRIKE_COLOR .byte $94
 ; Finally settled on using the P/Ms as counters showing balls the same 
 ; size of the game ball, and bouncing up and down in a sine wave.
 ;
+; Mode 6 color text for label.
+; Color 1  == "BALLS" 
+; Player 0 == Sine Wave Ball
+; Player 1 == Sine Wave Ball
+; Player 2 == Sine Wave Ball
+; Player 3 == Sine Wave Ball
+; Missile 0 == Sine Wave Ball
+;-------------------------------------------
+; MAIN can shift all HPOS to 0 when it 
+; disables the ball counter.
+;
+; Label at top corner:
+;
+; |xxx..xx.|..x....x|....xxxx| = $E6 $21 $0F
+; |x..x.x.x|..x....x|....x...| = $95 $21 $08
+; |xxx..xxx|x.xx...x|x...xxxx| = $E7 $B1 $8F
+; |xx.x.xx.|x.xx...x|x.....xx| = $D6 $B1 $83
+; |xxxx.xx.|x.xxxx.x|xxx.xxxx| = $F6 $BD $EF
+; | PM 0   | PM 1   | PM 2   |
+         
 ENABLE_BALL_COUNTER .byte 0
 ;
 ; How many game balls remaining?  5 max.
 ;
-BALL_COUNTER .byte 0 
+BALL_COUNTER .byte 5
+;
+; Ball Counter Title positions for DLI
+;
+BALL_TITLE_HPOS ; DLI: Add 8 for PM1 and then same for PM2
+	.byte $33
+;
+; "Text" labelling the balls, also done by Players.
+;
+BALL_TITLE_PM_BYTES_TABLE ; ordered PM0, PM1, PM2
+	.byte $E6,$21,$0F
+	.byte $95,$21,$08
+	.byte $E7,$B1,$8F
+	.byte $D6,$B1,$83
+	.byte $F6,$BD,$EF
 ;
 ; Don't need 60fps bounce.
 ;
@@ -2391,10 +2426,18 @@ SINE_WAVE_DELAY .byte 0
 BALL_COUNTER_SINE_STATE
 	.byte 0,3,6,9,12 
 ;
-; Player position for each ball.
+; Player position for each ball. (MAIN should set/reset for each ball).
 ;
-BALL_COUNTER_HPOS 
+BALL_COUNTER_HPOS_TABLE 
 	.byte $36,$3a,$3e,$42,$46 
+;
+; High Byte of P/M for each ball
+;
+BALL_COUNTER_PM_TABLE
+	.byte >PMADR_MISSILE,>PMADR_BASE0,>PMADR_BASE1,>PMADR_BASE2,>PMADR_BASE3
+
+
+
 ;
 ; They all share another random unicorn sparkle.
 ;
