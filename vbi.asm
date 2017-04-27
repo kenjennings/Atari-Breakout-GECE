@@ -1030,15 +1030,51 @@ End_Paddle_Movement
 ;===============================================================================
 ; BALL COUNTER
 ;===============================================================================
-; Player 0 == Sine Wave Balls
-; Player 1 == Sine Wave Balls
-; Player 2 == Sine Wave Balls.
-; Player 3 == Sine Wave Balls
-; Missile 0 == Sine Wave Balls
 ; Mode 6 color text for label.
 ; Color 1  == "BALLS" 
+; Player 0 == Sine Wave Ball
+; Player 1 == Sine Wave Ball
+; Player 2 == Sine Wave Ball
+; Player 3 == Sine Wave Ball
+; Missile 0 == Sine Wave Ball
 ;-------------------------------------------
+; MAIN can shift all HPOS to 0 when it wants
+; the ball counter disabled.
 
+	lda ENABLE_BALL_COUNTER ; is it enabled?
+	beq End_Ball_Counter    ; just end this.
+	
+	dec SINE_WAVE_DELAY     ; Decrement frame delay
+	bpl End_Ball_Counter    ; Noes not pass 0? Just end this.
+	
+	lda #4                  ; reset the delay
+	sta SINE_WAVE_DELAY
+	
+	ldx BALL_COUNTER        ; How many balls to animate?
+	dex                     ; Make 1-5 into 0-4
+	bmi End_Ball_Counter    ; crossed from 0 to -1, so no balls
+	
+	ldy BALL_COUNTER_PM_TABLE,x ; Get Player high byte
+	sty ZEROPAGE_POINTER_8+1
+	lda #0
+	sta ZEROPAGE_POINTER_8 ; Get ready to establish P/M
+	
+	stx PARAM6              ; Save current ball counter
+	
+	lda BALL_COUNTER_SINE_STATE,X
+	tax
+	ldy SINEWAVE,x
+		
+	sta (BALL_COUNTER_PM_TABLE),Y 
+	iny
+	sta (BALL_COUNTER_PM_TABLE),Y 
+	iny
+	sta (BALL_COUNTER_PM_TABLE),Y 
+	
+	
+	
+	
+End_Ball_Counter
 
 
 
@@ -1050,6 +1086,23 @@ End_Paddle_Movement
 ; Color 3  == score
 ;-------------------------------------------
 
+	lda ENABLE_SCORE 
+	bne Do_Score_Display
+
+	jsr Remove_Score_Display
+	beq End_Score_Display
+	
+Do_Score_Display
+	jsr Restore_Score_Display
+
+	
+End_Score_Display
+
+
+
+;===============================================================================
+; MUZAK AND SOUND EFFECTS
+;===============================================================================
 
 
 
@@ -1119,3 +1172,35 @@ Push_Boom_1_To_Boom_2
 	sta BOOM_2_CYCLE_x
 
 	rts
+
+	
+;=============================================
+; Remove Score Display
+Remove_Score_Display
+	lda #<EMPTY_LINE
+	sta DISPLAY_LIST_SCORE_LMS
+	lda #>EMPTY_LINE
+	sta DISPLAY_LIST_SCORE_LMS+1
+	lda #<EMPTY_LINE
+	sta DISPLAY_LIST_SCORE_LMS+3
+	lda #>EMPTY_LINE
+	sta DISPLAY_LIST_SCORE_LMS+4
+	
+	rts
+	
+	
+;=============================================
+; Restore score display
+Restore_Score_Display
+	lda #<SCORE_LINE0
+	sta DISPLAY_LIST_SCORE_LMS
+	lda #>SCORE_LINE0
+	sta DISPLAY_LIST_SCORE_LMS+1
+	lda #<SCORE_LINE1
+	sta DISPLAY_LIST_SCORE_LMS+3
+	lda #>SCORE_LINE1
+	sta DISPLAY_LIST_SCORE_LMS+4
+	
+	rts
+	
+	
