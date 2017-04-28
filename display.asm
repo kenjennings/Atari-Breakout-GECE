@@ -2379,6 +2379,14 @@ PADDLE_STRIKE_COLOR .byte $94
 ;
 ; Mode 6 color text for label.
 ; Color 1  == "BALLS" 
+; Label at top corner:
+; |xxx..xx.|..x....x|....xxxx| = $E6 $21 $0F
+; |x..x.x.x|..x....x|....x...| = $95 $21 $08
+; |xxx..xxx|x.xx...x|x...xxxx| = $E7 $B1 $8F
+; |xx.x.xx.|x.xx...x|x.....xx| = $D6 $B1 $83
+; |xxxx.xx.|x.xxxx.x|xxx.xxxx| = $F6 $BD $EF
+; | PM 0   | PM 1   | PM 2   |
+;-------------------------------------------
 ; Player 0 == Sine Wave Ball
 ; Player 1 == Sine Wave Ball
 ; Player 2 == Sine Wave Ball
@@ -2388,14 +2396,7 @@ PADDLE_STRIKE_COLOR .byte $94
 ; MAIN can shift all HPOS to 0 when it 
 ; disables the ball counter.
 ;
-; Label at top corner:
-;
-; |xxx..xx.|..x....x|....xxxx| = $E6 $21 $0F
-; |x..x.x.x|..x....x|....x...| = $95 $21 $08
-; |xxx..xxx|x.xx...x|x...xxxx| = $E7 $B1 $8F
-; |xx.x.xx.|x.xx...x|x.....xx| = $D6 $B1 $83
-; |xxxx.xx.|x.xxxx.x|xxx.xxxx| = $F6 $BD $EF
-; | PM 0   | PM 1   | PM 2   |
+
          
 ENABLE_BALL_COUNTER .byte 0
 ;
@@ -2431,13 +2432,10 @@ BALL_COUNTER_SINE_STATE
 BALL_COUNTER_HPOS_TABLE 
 	.byte $36,$3a,$3e,$42,$46 
 ;
-; High Byte of P/M for each ball
+; High Byte of P/M for each ball... Do I even need this?
 ;
 BALL_COUNTER_PM_TABLE
 	.byte >PMADR_MISSILE,>PMADR_BASE0,>PMADR_BASE1,>PMADR_BASE2,>PMADR_BASE3
-
-
-
 ;
 ; They all share another random unicorn sparkle.
 ;
@@ -2482,6 +2480,6 @@ REAL_SCORE_DIGITS
 ;
 ; Count about 10 frames between visible score updates.
 ;
-SCORE_INCREMENT_FRAME_DELAY
+DISPLAYED_SCORE_DELAY
 	.byte $0A
 
