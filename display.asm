@@ -2378,7 +2378,7 @@ PADDLE_STRIKE_COLOR .byte $94
 ; size of the game ball, and bouncing up and down in a sine wave.
 ;
 ; Mode 6 color text for label.
-; Color 1  == "BALLS" 
+; Color 1  == "BALLS" ?
 ; Label at top corner:
 ; |xxx..xx.|..x....x|....xxxx| = $E6 $21 $0F
 ; |x..x.x.x|..x....x|....x...| = $95 $21 $08
@@ -2451,35 +2451,104 @@ SINEWAVE
 ;===============================================================================
 ; SCORE
 ;===============================================================================
+; When a brick is destroyed the MAIN code adds the brick value to the 
+; score internally.  This is real-time.  
+;
+; Scoring update mechanism...
 ; If the displayed score is different from the internal (official) 
 ; score, then the displayed Score is incremented by 1 (with sound effects)
 ; once every 10 frames.
 ;
-; Trying to keep the score math simple.  Each digit on screen is 
-; managed by one byte in memory counting 0 to 9. (Use BCD mode?)
+; The actual score is displayed on screen one point at a time with 
+; corresponding audio "ding".  There must be a delay to allow the player
+; to hear each audio event.  When high value bricks are broken the visual
+; score progresses slower, and will temporarily fall behind the real score. 
 ;
-; Yes, 12 digits is totally ridiculous.  But most people could not sustain
-; a game to 1,000,000,000,000 points, so there is little chance of rollover.
+; Keeping the score math simple: Rather than trying to break
+; down a binary value 16 or more bits long into decimal, track each
+; decimal digit indvidually.  Each digit in the score is managed by 
+; one byte in memory counting 0 to 9.
+; 
+; Note that least significant to most significant digits are reversed
+; in memory for the convenience of indexing.  When the screen 
+; display is updated the position is determined from a table.
+;
+; Yes, 12 digits is totally ridiculous.  But, most people could not 
+; sustain a game to 1,000,000,000,000 points.  If a 7 point brick is
+; broken once each second, it would take approximately 31,709 years 
+; to exceed the range of 12 digits, so there is little chance of rollover.
 ;
 ;
 ENABLE_SCORE .byte 0
-
-DISPLAYED_SCORE
+;
+REAL_SCORE                        ; MAIN updates this
 	.byte 0,0,0,0,0,0,0,0,0,0,0,0
 ;
-; Number of digits actually populated
-;
-DISPLAYED_SCORE_DIGITS
+REAL_SCORE_DIGITS                 ; MAIN updates this
 	.byte 0
 ;
-REAL_SCORE
+DISPLAYED_SCORE                   ; VBI updates this
 	.byte 0,0,0,0,0,0,0,0,0,0,0,0
 ;
-REAL_SCORE_DIGITS
-	.byte 0
+; Count frames between visible score updates.
 ;
-; Count about 10 frames between visible score updates.
+DISPLAYED_SCORE_DELAY ; set to 10 when the score is updated
+	.byte $00
 ;
-DISPLAYED_SCORE_DELAY
-	.byte $0A
+; convert internal score bytes to screen order positions
+;
+DISPLAYED_SCORE_SCREEN_POSITION
+	.byte 39,38,37,36,35,34,33,32,31,30,29,28
+; 
+; each position has a base color to add
+;
+DISPLAYED_SCORE_CHAR_COLOR
+	.byte $00,$40,$00,$40,$00,$40,$00,$40,$00,$40,$00,$40
 
+
+;===============================================================================
+; SOUND EFFECTS (not display)
+;===============================================================================
+; Voice 0 and 1 == ball impacts -- paddle, walls, lost ball
+; (There is no sound for hitting bricks, since that sound
+; is actually the score counting ticks.)
+; Voice 2 and 3 == score counter
+
+;
+; An index for each voice.
+;
+
+ENABLE_SOUND .byte 0 ; Enable sound playing. $0 = off, $1 = on.
+
+SOUND_INDEX ; only bytes 0, 2, 4, 6 used for channels 1, 2, 3, 4.
+	.byte $00,$00,$00,$00,$00,$00,$00,$00
+
+SOUND_AUDC_TABLE ; AUDC -- Waveform, and Volume
+; index 0 is 0 sound
+	.byte $00
+; index 1 is bing/buzz on drop ball.  A 2ms, D 168ms, S 0, R 168 ms
+	.byte $Ad,$AC,$AB,$AA,$A9,$A8,$A7,$A6,$A5,$A3,$A2,$A0,$00
+; index $0e/14 is bounce wall.  A 2ms, D 168ms, S 0, R 168 ms
+	.byte $Ad,$AC,$AB,$AA,$A9,$A8,$A7,$A6,$A5,$A3,$A2,$A0,$00
+; index $1b/27 is bounce_paddle.  A 2ms, D 168ms, S 0, R 168 ms
+	.byte $Ad,$AC,$AB,$AA,$A9,$A8,$A7,$A6,$A5,$A3,$A2,$A0,$00
+; index $28/40 is bounce_brick.  A 2ms, D 168ms, S 0, R 168 ms
+	.byte $Ae,$AC,$Aa,$A8,$A6,$A4,$A3,$A2,$A1,$A0,$A0,$A0,$00
+		
+SOUND_AUDF_TABLE ; AUDF -- Frequency -- a little quirky tone shaping
+; index 0 is 0 sound
+	.byte $00
+; index 1 is bing/buzz on drop ball.  A 2ms, D 168ms, S 0, R 168 ms
+	.byte $30,$38,$40,$48,$50,$58,$60,$68,$70,$80,$90,$a0,$00
+; index $0E/14 is bounce wall.  A 2ms, D 168ms, S 0, R 168 ms
+	.byte $18,$18,$18,$18,$18,$18,$18,$18,$18,$18,$18,$18,$00
+; index $1b/27 is bounce_paddle.  A 2ms, D 168ms, S 0, R 168 ms
+	.byte $10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$00
+; index $28/40 is bounce brick 1.  A 2ms, D 168ms, S 0, R 168 ms
+	.byte $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$00
+; index $28/40 is bounce brick 1.  A 2ms, D 168ms, S 0, R 168 ms
+	.byte $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$00
+; index $28/40 is bounce brick 1.  A 2ms, D 168ms, S 0, R 168 ms
+	.byte $40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$00
+; index $28/40 is bounce brick 1.  A 2ms, D 168ms, S 0, R 168 ms
+	.byte $50,$50,$50,$50,$50,$50,$50,$50,$50,$50,$50,$50,$00
