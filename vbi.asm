@@ -1032,11 +1032,12 @@ End_Paddle_Movement
 ;===============================================================================
 ; Mode 6 color text for label.
 ; Color 1  == "BALLS" 
+;-------------------------------------------
+; Missile 0 == Sine Wave Ball
 ; Player 0 == Sine Wave Ball
 ; Player 1 == Sine Wave Ball
 ; Player 2 == Sine Wave Ball
 ; Player 3 == Sine Wave Ball
-; Missile 0 == Sine Wave Ball
 ;-------------------------------------------
 ; MAIN can shift all HPOS to 0 when it wants
 ; the ball counter disabled.
@@ -1044,35 +1045,69 @@ End_Paddle_Movement
 	lda ENABLE_BALL_COUNTER ; is it enabled?
 	beq End_Ball_Counter    ; just end this.
 	
+	lda RANDOM              ; Update the counter unicorn sparkle.
+	and #$F0                ; Random colors.
+	ora #$0A                ; Medium-ish brightness
+	sta BALL_COUNTER_COLOR
+	
 	dec SINE_WAVE_DELAY     ; Decrement frame delay
-	bpl End_Ball_Counter    ; Noes not pass 0? Just end this.
+	bpl End_Ball_Counter    ; Does not pass 0? Just end this.
 	
 	lda #4                  ; reset the delay
 	sta SINE_WAVE_DELAY
 	
 	ldx BALL_COUNTER        ; How many balls to animate?
 	dex                     ; Make 1-5 into 0-4
-	bmi End_Ball_Counter    ; crossed from 0 to -1, so no balls
+	bmi End_Ball_Counter    ; crossed from 0 to -1, so no balls left
 	
-	ldy BALL_COUNTER_PM_TABLE,x ; Get Player high byte
-	sty ZEROPAGE_POINTER_8+1
-	lda #0
-	sta ZEROPAGE_POINTER_8 ; Get ready to establish P/M
+	; By using Missile first, then Players 0, 1, 2, 3 I'm taking
+	; advantage of the fact that they each use a page in memory 
+	; consecutive to each other.  Therefore during the loop only 
+	; the high byte of the zero page pointer needs to be adjusted 
+	; and that can be done by an INC directly. 
 	
-	stx PARAM6              ; Save current ball counter
+	lda #$00                ; Get ready to establish pointer for P/M memory
+	sta ZEROPAGE_POINTER_8  
+	lda #>PMADR_MISSILE     ; Get first Player (Missile) memory high byte
+	sta ZEROPAGE_POINTER_8+1
 	
-	lda BALL_COUNTER_SINE_STATE,X
-	tax
-	ldy SINEWAVE,x
-		
-	sta (BALL_COUNTER_PM_TABLE),Y 
+Do_Ball_Counter_Animation
+	stx PARAM6                    ; Save current ball counter.  need this later.
+	
+	lda BALL_COUNTER_SINE_STATE,X ; Get which frame Ball X is on
+	tax                           ; Put the sine state into the index.
+	ldy SINEWAVE,x                ; Get Y position for this sine state/frame
+	
+	lda #$00                      ; Zero the old ball:
+	sta (BALL_COUNTER_PM_TABLE),Y ; Zero.
+	iny                           ; Next scan line...
+	sta (BALL_COUNTER_PM_TABLE),Y ; etc...
 	iny
 	sta (BALL_COUNTER_PM_TABLE),Y 
+	
+	dex                           ; decrement the sine state/frame counter
+	bpl Update_Sine_State         ; Update if it is not -1.
+	ldx #14                       ; It hit -1. Reset to initial state.
+
+Update_Sine_State
+	txa                           ; Hold new sine state/frame in A
+	ldx PARAM6                    ; Get the ball counter back into index
+	sta BALL_COUNTER_SINE_STATE,X ; Save the new state for this ball.
+	tax                           ; Put the sine state back into the index.
+	ldy SINEWAVE,x                ; Get Y position for this new sine state/frame
+
+	lda #$C0                      ; Draw the new ball:
+	sta (BALL_COUNTER_PM_TABLE),Y ; Draw.
+	iny                           ; Next scan line...
+	sta (BALL_COUNTER_PM_TABLE),Y ; etc...
 	iny
 	sta (BALL_COUNTER_PM_TABLE),Y 
+
+	inc ZEROPAGE_POINTER_8+1      ; Prep high byte for next Player object
 	
-	
-	
+	ldx PARAM6                    ; Get the ball counter back into index
+	dex                           ; Decrement for next ball
+	bpl Do_Ball_Counter_Animation ; If this is not -1, then animate next ball.
 	
 End_Ball_Counter
 
@@ -1087,14 +1122,55 @@ End_Ball_Counter
 ;-------------------------------------------
 
 	lda ENABLE_SCORE 
-	bne Do_Score_Display
-
-	jsr Remove_Score_Display
 	beq End_Score_Display
-	
-Do_Score_Display
-	jsr Restore_Score_Display
 
+	lda REAL_SCORE_DIGITS ; is there game score zero?
+	beq End_Score_Display ; Yes. So nothing to count/display.
+
+	dec DISPLAYED_SCORE_DELAY ; Was a count update done recently?
+	bpl End_Score_Display     ; Yes.  So, no new update.
+
+	; At this point scoring is enabled, the game score is non-zero,
+	; and if a score update occurred the timer is expired.
+	
+	; determine if the real score differs from displayed score.
+	ldx #0
+
+Find_Score_Difference	
+	lda DISPLAYED_SCORE,x          ; Get digit of displayed score.
+	cmp REAL_SCORE,x               ; Compare to real score.
+	bne Do_Update_Displayed_Score  ; Different! Go update display.
+	inx                            ; Move on to next digit.
+	cmp REAL_SCORE_DIGITS          ; Compare to actual digits used in real score.
+	bne Find_Score_Difference      ; Haven't reached the last digit. Try the next one.
+	
+	; No digit is unmatched.  
+	inc DISPLAYED_SCORE_DELAY ; reset to 0 since there is no update
+	beq End_Score_Display     ; we're done here.
+
+Do_Update_Displayed_Score
+	stx PARAM6                ; Save the position of the first different digit
+	clc                       ; make sure no carry is being dragged around.
+	
+Increment_Score
+	adc #1                    ; Add 1 to displayed score digit
+	cmp #10                   ; Is this digit beyond 0 to 9?
+	bne Do_Update_Display     ; No. So, display what is changed.
+	lda #0                    ; Yes.  Reset this digit to 0.
+	sta DISPLAYED_SCORE,x     ; Save the update.
+	inx                       ; Move to next digit position.
+	lda DISPLAYED_SCORE,x     ; Get next digit of displayed score.
+	bcc Increment_Score       ; go back and increment this new column.
+	
+	; update screen from X back to what was savein PARAM6
+Do_Update_Display
+	sta DISPLAYED_SCORE,x     ; save the update from above.
+
+; Given X, 
+;  Will need another table lookup to map 0 to 11 into +39 to +28.
+; update corresponding screen position.
+; test if X position is same as PARAM6.
+; if not, then decrement X and update next digit on screen.
 	
 End_Score_Display
 
@@ -1103,8 +1179,10 @@ End_Score_Display
 ;===============================================================================
 ; MUZAK AND SOUND EFFECTS
 ;===============================================================================
-
-
+; Voice 0 and 1 == ball impacts -- paddle, walls, lost ball
+; (There is no sound for hitting bricks, since that sound
+; is actually the score counting ticks.)
+; Voice 2 and 3 == score counter
 
 Exit_VBI
 ; Finito.
