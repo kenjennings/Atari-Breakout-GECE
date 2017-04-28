@@ -63,6 +63,55 @@ Remove_VBI
 ; following directions determined here.
 ;
 Breakout_VBI
+
+	; Enforce sanity during the intial hacking and testing phase.
+	; Force initial display values to be certain everything begins 
+	; at the a known state.
+	; Force the initial DLI just in case one goes crazy and the 
+	; DLI chaining gets messed up. 
+	; This will be commented out when code is more final.
+
+	lda #<DISPLAY_LIST ; Display List
+	sta SDLSTL
+	sta DLISTL
+	lda #>DISPLAY_LIST
+	sta SDLSTH
+	sta DLISTH
+	
+	lda #<DLI_1 ; DLI Vector
+	sta VDSLST
+	lda #>DLI_1
+	sta VDSLST+1
+	
+	lda #[ENABLE_DL_DMA|ENABLE_PM_DMA|PLAYFIELD_WIDTH_NARROW|PM_1LINE_RESOLUTION]
+	sta SDMCTL ; Display DMA control
+	sta DMACTL
+	
+	lda #[NMI_DLI|NMI_VBI] ; Interrupt flags ON
+	sta NMIEN
+	
+	lda #4 ; Finescrolling. 
+	sta HSCROL      ; Title text line is shifted by HSCROLL to center it.
+	lda #0
+	sta VSCROL
+
+	lda #>CHARACTER_SET_01 ; Character set for title
+	sta CHBAS
+	sta CHBASE
+	
+	lda #>PLAYER_MISSILE_BASE ; Player/Missile graphics memory.
+	sta PMBASE
+	
+	lda TITLE_HPOSP0    ; reset horizontal position for Player as Title character
+	sta HPOSP0
+	
+	lda #PM_SIZE_NORMAL ; reset size for Player as Title character 
+	sta SIZEP0
+	
+	lda #[FIFTH_PLAYER|1] ; Missiles = COLPF3.  Player/Missiles on top.  
+	sta GPRIOR
+	sta PRIOR
+
 ; ==============================================================
 ; TITLE FLY IN
 ; ==============================================================
@@ -86,66 +135,19 @@ Breakout_VBI
 ; (Estimating that even this could get boring after a while... thinking
 ; about doing random horizontal and vertical scrolling to move the title
 ; off the top of the screen.) 
-
-	; Enforce sanity during the intial hacking and testing phase.
-	; Force initial display values to be certain everything begins 
-	; at the a known state.
-	; Force the initial DLI just in case one goes crazy and the 
-	; DLI chaining gets messed up. 
-	; Most of this will be commented out when code is more final.
-
-	lda #<DISPLAY_LIST ; Display List
-	sta SDLSTL
-	sta DLISTL
-	lda #>DISPLAY_LIST
-	sta SDLSTH
-	sta DLISTH
-	
-	lda #<DLI_1 ; DLI Vector
-	sta VDSLST
-	lda #>DLI_1
-	sta VDSLST+1
-	
-	lda #[ENABLE_DL_DMA|ENABLE_PM_DMA|PLAYFIELD_WIDTH_NARROW|PM_1LINE_RESOLUTION]
-	sta SDMCTL; Display DMA control
-	sta DMACTL
-	
-	lda #[NMI_DLI|NMI_VBI] ; Interrupt flags
-	sta NMIEN
-	
-	lda #4 ; Finescrolling. 
-	sta HSCROL ; Title text line is shifted by HSCROLL to center it.
-	lda #0
-	sta VSCROL
-
-	lda #>CHARACTER_SET_01 ; Character set for title
-	sta CHBAS
-	sta CHBASE
-	
-	lda #>PLAYER_MISSILE_BASE ; Player/Missile graphics memory.
-	sta PMBASE
-	
-	lda TITLE_HPOSP0
-	sta HPOSP0
-	
-	lda #PM_SIZE_NORMAL
-	sta SIZEP0
-	
-	lda #[FIFTH_PLAYER|1] ; Missiles = COLPF3.  Player/Missiles on top.  
-	sta GPRIOR
-	sta PRIOR
 	
 	; If Title is NOT running, and the main 
 	; line wants it started, then start...
-	ldy TITLE_PLAYING ; Is title currently running?
-	bne Run_Title ; >0, yes.  continue to run.
-	; no. it is off.
-	lda TITLE_STOP_GO ; Does main line want to start title?
-	bne Start_Title ; Yes, begin title.
-	beq End_Title ; No.  Skip title things.
+	
+	ldy TITLE_PLAYING  ; Is title currently running?
+	bne Run_Title      ; >0, yes.  continue to run.
+	                   ; no. it is off.
+	lda TITLE_STOP_GO  ; Does main line want to start title?
+	bne Start_Title    ; Yes, begin title.
+	beq End_Title      ; No.  Skip title things.
 
 Stop_Title  ; stop/zero everything.
-	; reset scroll to empty title.
+	        ; reset to empty title.
 
 	lda #0
 	sta TITLE_PLAYING
@@ -159,15 +161,15 @@ Stop_Title  ; stop/zero everything.
 	ldx #0
 	jsr Update_Title_Scroll ; Set vertical scroll and DLI values
 	
-	jsr Clear_Title_Lines ; Make sure Title text is erased
+	jsr Clear_Title_Lines   ; Make sure Title text is erased
 	
 	lda #<TITLE_FRAME_EMPTY
 	sta DISPLAY_LIST_TITLE_VECTOR ; Empty scroll window
 	
 	beq End_Title
 
-Start_Title ; Step into the first phase -- pause before fly-in
-	ldy #1 ; Enagage initial pause
+Start_Title                 ; Step into the first phase -- pause before fly-in
+	ldy #1                  ; Enagage initial pause
 	sty TITLE_PLAYING
 
 	; Prep values for Stage 1.
@@ -175,37 +177,36 @@ Start_Title ; Step into the first phase -- pause before fly-in
 	sta TITLE_TIMER
 
 Run_Title
-	lda TITLE_STOP_GO ; Does Mainline want this to stop?
-	beq Stop_Title ; 0.  Yes.  clean screen.
+	lda TITLE_STOP_GO       ; Does Mainline want this to stop?
+	beq Stop_Title          ; 0. Yes. clean screen.
 
-	; Always move the colors.
+	                        ; Always move the colors.
 	inc TITLE_COLOR_COUNTER ; next index in color table
 	lda TITLE_COLOR_COUNTER
-	cmp #43 ; 42 is last color index for title colors.
-	bcc Title_Pause_1 ; No. Continue with next step.
-	lda #0 ; Reset
+	cmp #43                 ; 42 is last color index for title colors.
+	bcc Title_Pause_1       ; No. Continue with next step.
+	lda #0                  ; Reset
 	sta TITLE_COLOR_COUNTER
 
-Title_Pause_1 ; Pause before title 
+Title_Pause_1               ; Pause before title 
 	ldy TITLE_PLAYING
-	cpy #1 ; Is this #1 == Clear, no movement?
-	bne Title_FlyIn
+	cpy #1                  ; Is this #1 == Clear, no movement?
+	bne Title_FlyIn         ; No, things are in motion.
 
-	dec TITLE_TIMER
-	lda TITLE_TIMER
-	
-	bne End_Title ; Done messing with title until timer expires.
+	dec TITLE_TIMER         ; Decrement timer
+	lda TITLE_TIMER         ; Is it still > 0 ?
+	bne End_Title           ; Yes. Done messing with title until timer expires.
 
-	lda #0
-	sta TITLE_CURRENT_FLYIN  ; start at first character in list
-	sta TITLE_HPOS0          ; reset HPOS to off screen.
+	lda #0                  ; No. Do Flying Text
+	sta TITLE_CURRENT_FLYIN ; start at first character in list
+	sta TITLE_HPOS0         ; reset HPOS to off screen.
 
 	tax ; to update TITLE_SCROLL_COUNTER 
-	jsr Update_Title_Scroll
+	jsr Update_Title_Scroll  
 
 	jsr Clear_Title_Lines
 
-	ldy #2 ; Engage fly-in
+	ldy #2                  ; Engage fly-in
 	sty TITLE_PLAYING
 	bne End_Title
 
@@ -1141,11 +1142,14 @@ Find_Score_Difference
 	cmp REAL_SCORE,x               ; Compare to real score.
 	bne Do_Update_Displayed_Score  ; Different! Go update display.
 	inx                            ; Move on to next digit.
+	cmp #12                        ; Really?  You're beating 999,999,999,999 ?
+	beq No_New_Digits              ; No. No you're not. Not in this lifetime.
 	cmp REAL_SCORE_DIGITS          ; Compare to actual digits used in real score.
-	bne Find_Score_Difference      ; Haven't reached the last digit. Try the next one.
+	bne Find_Score_Difference      ; Haven't reached the last used digit. Try the next.
 	
+No_New_Digits	
 	; No digit is unmatched.  
-	inc DISPLAYED_SCORE_DELAY ; reset to 0 since there is no update
+	inc DISPLAYED_SCORE_DELAY ; reset delay to 0 since there is no update now.
 	beq End_Score_Display     ; we're done here.
 
 Do_Update_Displayed_Score
@@ -1154,35 +1158,102 @@ Do_Update_Displayed_Score
 	
 Increment_Score
 	adc #1                    ; Add 1 to displayed score digit
-	cmp #10                   ; Is this digit beyond 0 to 9?
-	bne Do_Update_Display     ; No. So, display what is changed.
+	cmp #10                   ; Did single-digit 9 increment into double-digit 10?
+	bne Save_And_Do_Display   ; No. So, display what is changed.
 	lda #0                    ; Yes.  Reset this digit to 0.
 	sta DISPLAYED_SCORE,x     ; Save the update.
 	inx                       ; Move to next digit position.
 	lda DISPLAYED_SCORE,x     ; Get next digit of displayed score.
 	bcc Increment_Score       ; go back and increment this new column.
-	
-	; update screen from X back to what was savein PARAM6
-Do_Update_Display
-	sta DISPLAYED_SCORE,x     ; save the update from above.
 
-; Given X, 
-;  Will need another table lookup to map 0 to 11 into +39 to +28.
-; update corresponding screen position.
-; test if X position is same as PARAM6.
-; if not, then decrement X and update next digit on screen.
+Save_And_Do_Display
+	sta DISPLAYED_SCORE,x     ; save the last update from above
+	
+	; update screen starting from X going 
+	; back to what was saved in PARAM6
+Do_Update_Display
+	adc #1                           ; increment 0 to 9 to char 1 to 10.
+	ora DISPLAYED_SCORE_CHAR_COLOR,x ; Add color to score byte
+	ldy DISPLAYED_SCORE_POSITION,x   ; Get screen offset
+	sta SCORE_LINE0,y                ; Display top half of number character.
+	adc #10                          ; Add 10 to character value.        
+	sta SCORE_LINE1,y                ; Display bottom half or number character.
+	dex                              ; move backwards to previous position
+	lda DISPLAYED_SCORE,x            ; get byte value at that position (borderline dangerous)
+	cpx PARAM6                       ; compare to first position saved earlier.
+	bcs Do_Update_Display            ; if greater than/equal to, then display this digit.
+
+	lda #10                   ; Reset displayed score delay
+	sta DISPLAYED_SCORE_DELAY 
+	
+	; Here initiate an audio bling.
 	
 End_Score_Display
 
 
 
 ;===============================================================================
-; MUZAK AND SOUND EFFECTS
+; SOUND EFFECTS
 ;===============================================================================
 ; Voice 0 and 1 == ball impacts -- paddle, walls, lost ball
 ; (There is no sound for hitting bricks, since that sound
-; is actually the score counting ticks.)
+; is actually the score counting "dings".)
 ; Voice 2 and 3 == score counter
+;-------------------------------------------------------------------------------
+; The world's cheapest, and cheesiest sequencer. 
+;-------------------------------------------------------------------------------
+; For each channel, play one sound value from a table at each frame. 
+; At 60fps this is a sound change (frequency and volume ) once
+; per sound channel every 16.6ms (approximately)
+; 
+; If the current index is zero then no change for sound channel. 
+; Apply the Control and Frequency values from the tables 
+; to AUDC and AUDF1. 
+; If Control and Frequency are both 0 then the sound is over, so 
+; zero the index. 
+; If either Control or Frequency are non-zero, then increment the 
+; index for the next call.
+;
+; AUDC and AUDF registers are interleaved.  So, accessing each 
+; channel by index is two bytes per index/increment.
+;-------------------------------------------------------------------------------
+
+	lda ENABLE_SOUND
+	beq exitSoundService
+	
+	ldx #6                  ; Start at last channel 0 to 3 (3 * 2 = 6)
+	
+Play_Sound_Channel	
+	ldy SOUND_INDEX,x       ; Get current sound progress
+	beq Next_Sound_Channel  ; If zero, then no sound.
+
+	lda SOUND_AUDC_TABLE,y  ; Load current sound into registers
+	sta AUDC1,x
+	lda SOUND_AUDF_TABLE,y
+	sta AUDF1,x
+
+	; if AUDC and AUDF values are both zero then zero the index
+	ora SOUND_AUDC_TABLE,y  ; if AUDC and AUDF values are not zero
+	bne Update_Sound_Index  ; then incement index for next sound
+	
+	sta SOUND_INDEX,x       ; otherwise, if 0, then reset index to 0
+	beq Next_Sound_Channel  ; Do next sound channel
+
+Update_Sound_Index
+	inc SOUND_INDEX,x       ; increment index value for next frame.
+
+Next_Sound_Channel
+	dex                     ; increment channel index (twice)
+	dex
+	bpl Play_Sound_Channel  ; if channel index did not go to -1 then do next 
+	
+exitSoundService
+
+	
+
+;===============================================================================
+; THE END OF USER DEFERRED VBI ROUTINE 
+;===============================================================================
 
 Exit_VBI
 ; Finito.
@@ -1266,7 +1337,7 @@ Remove_Score_Display
 	
 	rts
 	
-	
+
 ;=============================================
 ; Restore score display
 Restore_Score_Display
