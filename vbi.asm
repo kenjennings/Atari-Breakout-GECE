@@ -112,6 +112,9 @@ Breakout_VBI
 	sta GPRIOR
 	sta PRIOR
 
+	lda #[ENABLE_PLAYERS|ENABLE_MISSILES]
+	sta GRACTL ; Graphics Control, P/M DMA 
+	
 ; ==============================================================
 ; TITLE FLY IN
 ; ==============================================================
@@ -156,7 +159,7 @@ Stop_Title  ; stop/zero everything.
 	sta TITLE_SIZEP0
 	sta TITLE_GPRIOR
 
-    sta TITLE_CURRENT_FLYIN
+	sta TITLE_CURRENT_FLYIN
 	
 	ldx #0
 	jsr Update_Title_Scroll ; Set vertical scroll and DLI values
@@ -221,25 +224,25 @@ Title_FlyIn
 	bne Title_Pause_2
 
 	ldx TITLE_HPOS0 ; if this is non-zero then a letter is in motion
-    bne FlyingChar
-    ldx TITLE_CURRENT_FLYIN ; if this is 8 then we should  be in admiration mode
-    cpx #8  ; The scroller will reset this to 0 when done.
-    bne FlyInStartChar
+	bne FlyingChar
+ 	ldx TITLE_CURRENT_FLYIN ; if this is 8 then we should  be in admiration mode
+	cpx #8  ; The scroller will reset this to 0 when done.
+	bne FlyInStartChar
 	
-    ldy #3 ; DONE. Set to do the next step -- pause for admiration.
-    sty TITLE_PLAYING
+	ldy #3 ; DONE. Set to do the next step -- pause for admiration.
+	sty TITLE_PLAYING
 
 	ldy #120 ; how long to pause...
 	sty TITLE_TIMER
-    bne Title_Pause_2
+	bne Title_Pause_2
 
 ; FLY IN PART 1 - Start the character
 ; establish the next character to fly in.
 FlyInStartChar
-    lda #$FE ; extreme right side
-    sta TITLE_HPOS0 ; new horizontal position.
-    ldx TITLE_CURRENT_FLYIN ; which character ?
-	
+	lda #$FE ; extreme right side
+	sta TITLE_HPOS0 ; new horizontal position.
+ 	ldx TITLE_CURRENT_FLYIN ; which character ?
+
 	ldy TITLE_DLI_PMCOLOR_TABLE,x ; Tell DLI which color for Flying letter
 	sty TITLE_DLI_PMCOLOR
 	
@@ -249,41 +252,41 @@ FlyInStartChar
 	sta ZTITLE_COLPM0+1 
 
 Copy_Char_Image_To_PM
-    ldy TITLE_PM_IMAGE_LIST,x ; get starting image offset for character
-    ldx #25 ; destination scan line
+	ldy TITLE_PM_IMAGE_LIST,x ; get starting image offset for character
+	ldx #25 ; destination scan line
 CopyCharToPM
-    lda CHARACTER_SET,y ; copy from character set
-    sta PMADR_BASE0,x ; to the P/M image memory
-    iny
-    inx
-    cpx #41 ; ending scan line (16 total) 
-    bne CopyCharToPM
+	lda CHARACTER_SET,y ; copy from character set
+	sta PMADR_BASE0,x ; to the P/M image memory
+	iny
+	inx
+	cpx #41 ; ending scan line (16 total) 
+	bne CopyCharToPM
 
-    ldx TITLE_HPOS0
+	ldx TITLE_HPOS0
 
 ; FLY IN PART 2 - Move the current P/M character
 FlyingChar
-    dex ; move P/M left 2 color clocks
-    dex
-    stx TITLE_HPOS0; and set it.
-    txa  ; needs to be in A so we can compare from a table.
-    ldx TITLE_CURRENT_FLYIN 
-    cmp TITLE_PM_TARGET_LIST,x ; destination PM position for character
-    bne Title_Pause_2
-    ; the flying P/M has reached target position. 
-    ; Replace it with the character on screen.
-    lda TITLE_PM_CHAR_POS,x ; get corresponding character postition.
-    tay
-    lda TITLE_CHAR_LIST,x ; get character
-    sta TITLE_LINE0,y ; top half of title
+	dex ; move P/M left 2 color clocks
+	dex
+	stx TITLE_HPOS0; and set it.
+	txa  ; needs to be in A so we can compare from a table.
+	ldx TITLE_CURRENT_FLYIN 
+	cmp TITLE_PM_TARGET_LIST,x ; destination PM position for character
+	bne Title_Pause_2
+	; the flying P/M has reached target position. 
+	; Replace it with the character on screen.
+	lda TITLE_PM_CHAR_POS,x ; get corresponding character postition.
+	tay
+	lda TITLE_CHAR_LIST,x ; get character
+	sta TITLE_LINE0,y ; top half of title
 	clc
-    adc #1 ; determine the next screen byte value
-    sta TITLE_LINE1,y ; bottom half of title
-    
-    ; Setup for next Character
-    inc TITLE_CURRENT_FLYIN ; next flying chraracter
-    lda #0
-    sta TITLE_HPOS0 ; set P/M offscreen
+	adc #1 ; determine the next screen byte value
+	sta TITLE_LINE1,y ; bottom half of title
+	
+	; Setup for next Character
+	inc TITLE_CURRENT_FLYIN ; next flying chraracter
+	lda #0
+	sta TITLE_HPOS0 ; set P/M offscreen
 
 	
 ; PAUSE:  Admire the title
@@ -594,7 +597,7 @@ Move_Brick_Row
 	clc                     ; Add to return this...
 	adc #8                  ; ... to positive. (using 8, not 16 color clocks)
 	inc BRICK_BASE,y        ; IncrementLMS to Coarse scroll it
-    bne Update_HScrol
+	bne Update_HScrol
 	
 Do_Bricks_Right_Scroll	    ; Move view left/screen contents Right
 	lda BRICK_CURRENT_HSCROL,x      ; get the current Hscrol for this row.
@@ -1351,5 +1354,3 @@ Restore_Score_Display
 	sta DISPLAY_LIST_SCORE_LMS+4
 	
 	rts
-	
-	
