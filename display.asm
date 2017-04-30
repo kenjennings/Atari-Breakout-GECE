@@ -560,9 +560,10 @@ THUMPER_FRAME5
 ; Player 0 = Ball 
 ; Player 1 = boom-o-matic animation 1
 ; Player 2 = boom-o-matic animation 1
+;-------------------------------------------
 ;    and already set earlier:
 ; Player 3 = Left bumper 
-; Missile (5th Player) = Right Bumper
+; Missile 0 (5th Player) = Right Bumper
 ;-------------------------------------------
 ; COLPF0, COLPM0, COLPM1, COLPM2
 ; HPOSP0, HPOSP1, HPOSP2
@@ -704,7 +705,8 @@ DISPLAY_LIST_THUMPER_RTS ; destination for animation routine return.
 	; Scan line 54-77,   screen line 47-70,     24 blank lines
 	.byte DL_BLANK_8
 	.byte DL_BLANK_8
-	.byte DL_BLANK_8|DL_DLI
+	.byte DL_BLANK_7|DL_DLI 
+	.byte DL_BLANK_1
 	; DLI3: Hkernel 8 times....
 	;      Set HSCROLL for line, VSCROLL = 5, then Set COLPF0 for 5 lines.
 	;      Reset VScroll to 1 (allowing 2 blank lines.)
@@ -1055,10 +1057,10 @@ TITLE_SCROLL_COUNTER ; index into the tables above. 0 to 32
 
 	
 ; DLI parts.
-TITLE_WSYNC_OFFSET  .byte 20 ; Number of lines to drop through before color draw
+TITLE_WSYNC_OFFSET  .byte 20 ; Number of scan lines to drop through before color draw
 
-TITLE_WSYNC_COLOR   .byte 12 ; Number of lines to do color draw
-TITLE_WSYNC_COLOR_TEMP
+TITLE_WSYNC_COLOR   .byte 12 ; Number of scan lines to do color bars
+
 TITLE_COLOR_COUNTER .byte 0  ; Index into color table
 
 TITLE_DLI_PMCOLOR   .byte 0
@@ -1393,6 +1395,17 @@ TITLE_TEXT1
 ; the low byte of a JMP instruction in the Display
 ; List to point to the next frame in the animation.
 ;
+;-------------------------------------------
+; color 1 = horizontal/top bumper.
+; Player 3 = Left bumper 
+; Missile (5th Player) = Right Bumper
+;-------------------------------------------
+; COLPF0, 
+; COLPM3, COLPF3
+; HPOSP3, HPOSM0
+; SIZEP3, SIZEM0
+;-------------------------------------------
+
 THUMPER_HORIZ_ANIM_TABLE
 	.byte <THUMPER_FRAME_WAIT
 	.byte <THUMPER_FRAME0
@@ -1407,29 +1420,45 @@ THUMPER_HORIZ_ANIM_TABLE
 	.byte <THUMPER_FRAME5
 	.byte <THUMPER_FRAME0
 
-; Missile -- LEFT Vertical Thumper sequence
-; List establishes HPOS and SIZE
+; Player 3 -- LEFT Vertical Thumper sequence
+; Lists establish HPOS and SIZE for DLI2.
 ; entry 0 is waiting state.
 ;
-THUMPER_LEFT_ANIM_TABLE
-	.byte MIN_PIXEL_X-1,  ~00000000 ; Waiting for Proximity 
-	.byte MIN_PIXEL_X-4,  ~00000011 ; MASK: MASK_MISSILE0_BITS
-	.byte MIN_PIXEL_X-5,  ~00000001
-	.byte MIN_PIXEL_X-6,  ~00000000
-	.byte MIN_PIXEL_X-8,  ~00000000
-	.byte MIN_PIXEL_X-11, ~00000000
+THUMPER_LEFT_HPOS_TABLE
+	.byte MIN_PIXEL_X-1 ; Waiting for Proximity 
+	.byte MIN_PIXEL_X-4 
+	.byte MIN_PIXEL_X-5
+	.byte MIN_PIXEL_X-6
+	.byte MIN_PIXEL_X-8
+	.byte MIN_PIXEL_X-11
 
-; Missile -- RIGHT Vertical Thumper sequence
-; List establishes HPOS and SIZE
-; entry 0 is waiting state
+THUMPER_LEFT_SIZE_TABLE
+	.byte ~00000000 ; Waiting for Proximity 
+	.byte ~00000011 
+	.byte ~00000001
+	.byte ~00000000
+	.byte ~00000000
+	.byte ~00000000
+
+; Missile 0 -- RIGHT Vertical Thumper sequence
+; Lists establish HPOS and SIZE for DLI2.
+; entry 0 is waiting state.
 ;
-THUMPER_RIGHT_ANIM_TABLE
-	.byte MIN_PIXEL_X+1,  ~00000000 ; Waiting for Proximity 
-	.byte MIN_PIXEL_X+1,  ~00001100 ; MASK: MASK_MISSILE1_BITS
-	.byte MIN_PIXEL_X+4,  ~00000100
-	.byte MIN_PIXEL_X+6,  ~00000000
-	.byte MIN_PIXEL_X+8,  ~00000000
-	.byte MIN_PIXEL_X+11, ~00000000
+THUMPER_RIGHT_HPOS_TABLE
+	.byte MIN_PIXEL_X+1 ; Waiting for Proximity 
+	.byte MIN_PIXEL_X+1
+	.byte MIN_PIXEL_X+4
+	.byte MIN_PIXEL_X+6
+	.byte MIN_PIXEL_X+8
+	.byte MIN_PIXEL_X+11
+
+THUMPER_RIGHT_SIZE_TABLE
+	.byte ~00000000 ; Waiting for Proximity 
+	.byte ~00001100
+	.byte ~00000100
+	.byte ~00000000
+	.byte ~00000000
+	.byte ~00000000
 ;
 ; THUMPER-BUMPER Proximity set by MAIN code:
 ; 
@@ -1441,9 +1470,9 @@ THUMPER_PROXIMITY_RIGHT .byte $09
 ; VBI maintains animation frame progress
 ;
 THUMPER_FRAME
-THUMPER_FRAME_TOP   .byte 0 ; 0 is no animation.
-THUMPER_FRAME_LEFT  .byte 0 ; 0 is no animation.
-THUMPER_FRAME_RIGHT .byte 0 ; 0 is no animation.
+THUMPER_FRAME_TOP   .byte 0 ; 0 is no animation. VBI Sets DLI vector for this.
+THUMPER_FRAME_LEFT  .byte 0 ; 0 is no animation. DLI sets HPOS and SIZE
+THUMPER_FRAME_RIGHT .byte 0 ; 0 is no animation. DLI sets HPOS and SIZE
 ;
 ; VBI maintains animation frames
 ;
@@ -1469,7 +1498,7 @@ THUMPER_COLOR_RIGHT .byte 0
 ; Distance 9 is black.  (maybe we'll make it very grey)
 ; Thumper animation (distance 0 ) is white.
 ; greater than 8 is color $00
-THUMPER_PROXIMITY_COLOR
+THUMPER_PROXIMITY_COLORTHUMPER_COLOR_TOP
 	.byte $0E,$7E,$7C,$7A,$78,$76,$74,$72,$70,$00
 
 
@@ -1673,6 +1702,13 @@ BRICK_CURRENT_LMS_OFFSETS ; DISPLAY LIST: offset from BRICK_BASE to low byte of 
 ; DLI: HSCROL/fine scrolling position.
 ;
 BRICK_CURRENT_HSCROL .byte 0,0,0,0,0,0,0,0
+;
+; DLI: Set line colors....  introducing a little more variety than 
+; the original game and elsewhere on the screen.
+;
+BRICK_CURRENT_COLOR ; Base color for gradient
+    .byte COLOR_PINK+2,  COLOR_PURPLE+2,     COLOR_RED_ORANGE+2,  COLOR_ORANGE2+2
+    .byte COLOR_GREEN+2, COLOR_BLUE_GREEN+2, COLOR_LITE_ORANGE+2, COLOR_ORANGE_GREEN+2
 ;
 ; MAIN code sets the following sets of configuration
 ; per each line of the playfield.  VBI takes these
@@ -1930,14 +1966,14 @@ BOOM_1_COLPM .byte 0,0,0,0,0,0,0,0 ; DLI needs P/M COLPM1 for row
 BOOM_2_COLPM .byte 0,0,0,0,0,0,0,0 ; DLI needs P/M COLPM2 for row
 
 BOOM_CYCLE_COLOR ; by row by cycle frame -- 9 frames per boom animation
-	.byte $0E,COLOR_PINK|$0E,       COLOR_PINK|$0C,       COLOR_PINK|$0A,       COLOR_PINK|$08,COLOR_PINK|$06,COLOR_PINK|$04,$02,$00
-	.byte $0E,COLOR_PINK|$0E,       COLOR_PINK|$0C,       COLOR_PINK|$0A,       COLOR_PINK|$08,COLOR_PINK|$06,COLOR_PINK|$04,$02,$00
-	.byte $0E,COLOR_RED_ORANGE|$0E, COLOR_RED_ORANGE|$0C, COLOR_RED_ORANGE|$0A, COLOR_RED_ORANGE|$08,COLOR_RED_ORANGE|$06,COLOR_RED_ORANGE|$04,$02,$00
-	.byte $0E,COLOR_RED_ORANGE|$0E, COLOR_RED_ORANGE|$0C, COLOR_RED_ORANGE|$0A, COLOR_RED_ORANGE|$08,COLOR_RED_ORANGE|$06,COLOR_RED_ORANGE|$04,$02,$00
-	.byte $0E,COLOR_GREEN|$0E,      COLOR_GREEN|$0C,      COLOR_GREEN|$0A,      COLOR_GREEN|$08,COLOR_GREEN|$06,COLOR_GREEN|$04,$02,$00
-	.byte $0E,COLOR_GREEN|$0E,      COLOR_GREEN|$0C,      COLOR_GREEN|$0A,      COLOR_GREEN|$08,COLOR_GREEN|$06,COLOR_GREEN|$04,$02,$00
-	.byte $0E,COLOR_LITE_ORANGE|$0E,COLOR_LITE_ORANGE|$0C,COLOR_LITE_ORANGE|$0A,COLOR_LITE_ORANGE|$08,COLOR_LITE_ORANGE|$06,COLOR_LITE_ORANGE|$04,$02,$00
-	.byte $0E,COLOR_LITE_ORANGE|$0E,COLOR_LITE_ORANGE|$0C,COLOR_LITE_ORANGE|$0A,COLOR_LITE_ORANGE|$08,COLOR_LITE_ORANGE|$06,COLOR_LITE_ORANGE|$04,$02,$00
+	.byte $0E,COLOR_PINK|$0E,         COLOR_PINK|$0C,         COLOR_PINK|$0A,         COLOR_PINK|$08,         COLOR_PINK|$06,         COLOR_PINK|$04,$02,$00
+	.byte $0E,COLOR_PURPLE|$0E,       COLOR_PURPLE|$0C,       COLOR_PURPLE|$0A,       COLOR_PURPLE|$08,       COLOR_PURPLE|$06,       COLOR_PURPLE|$04,$02,$00
+	.byte $0E,COLOR_RED_ORANGE|$0E,   COLOR_RED_ORANGE|$0C,   COLOR_RED_ORANGE|$0A,   COLOR_RED_ORANGE|$08,   COLOR_RED_ORANGE|$06,   COLOR_RED_ORANGE|$04,$02,$00
+	.byte $0E,COLOR_ORANGE2|$0E,      COLOR_ORANGE2|$0C,      COLOR_ORANGE2|$0A,      COLOR_ORANGE2|$08,      COLOR_ORANGE2|$06,      COLOR_ORANGE2|$04,$02,$00
+	.byte $0E,COLOR_GREEN|$0E,        COLOR_GREEN|$0C,        COLOR_GREEN|$0A,        COLOR_GREEN|$08,        COLOR_GREEN|$06,        COLOR_GREEN|$04,$02,$00
+	.byte $0E,COLOR_BLUE_GREEN|$0E,   COLOR_BLUE_GREEN|$0C,   COLOR_BLUE_GREEN|$0A,   COLOR_BLUE_GREEN|$08,   COLOR_BLUE_GREEN|$06,   COLOR_BLUE_GREEN|$04,$02,$00
+	.byte $0E,COLOR_LITE_ORANGE|$0E,  COLOR_LITE_ORANGE|$0C,  COLOR_LITE_ORANGE|$0A,  COLOR_LITE_ORANGE|$08,  COLOR_LITE_ORANGE|$06,  COLOR_LITE_ORANGE|$04,$02,$00
+	.byte $0E,COLOR_ORANGE_GREEN|$0E, COLOR_ORANGE_GREEN|$0C, COLOR_ORANGE_GREEN|$0A, COLOR_ORANGE_GREEN|$08, COLOR_ORANGE_GREEN|$06, COLOR_ORANGE_GREEN|$04,$02,$00
 
 BOOM_CYCLE_OFFSET ; Base offset (row * 9) to the color entries and P/M images for the cycle.
 	.byte $00,9,18,27,36,45,54,63,72
@@ -1956,7 +1992,7 @@ BOOM_CYCLE_SIZE ; by cycle frame
 	.byte PM_SIZE_NORMAL ; 2 bits * 1 color clocks == 2 color clocks.  ; 8
 	.byte PM_SIZE_NORMAL ; 2 bits * 1 color clocks == 2 color clocks.  ; 9
 	
-BOOM_ANIMATION_FRAMES ; 7 bytes of Player image data per each cycle frame -- 8th and 9th byte 0 padded, since we have a offset table for * 9 
+BOOM_ANIMATION_FRAMES ; 7 bytes of Player image data per each cycle frame -- 8th and 9th byte 0 padded, since we are putting the * 9 offset table to dual use.  
 	.byte $FC,$FC,$FC,$FC,$FC,$FC,$FC,$00,$00 ; 7 scan lines, 6 bits * 2 color clocks == 12 color clocks. ; 1
 	.byte $FC,$FC,$FC,$FC,$FC,$FC,$FC,$00,$00 ; 7 scan lines, 6 bits * 2 color clocks == 12 color clocks. ; 2
 	.byte $00,$F8,$F8,$F8,$F8,$F8,$00,$00,$00 ; 5 scan lines, 5 bits * 2 color clocks == 10 color clocks. ; 3
@@ -2302,24 +2338,24 @@ PADDLE_SIZE .byte 0 ; MAIN to VBI: Paddle Size  0 = Normal. 1 = Small.
 ; Convert Potentiometer value to Paddle screen position.
 ;
 PADDLE_NORMAL_POSITION_TABLE ; 228 bytes of HPOS coordinates corresponding to paddle values
-    .byte $CA,$CA,$CA,$C9,$C9,$C8,$C7,$C6,$C6,$C5,$C4,$C4,$C3,$C2,$C2,$C1,$C0,$BF,$BF,$BE,$BD,$BD,$BC,$BB,$BB,$BA,$B9,$B8,$B8,$B7,$B6,$B6
-    .byte $B5,$B4,$B4,$B3,$B2,$B1,$B1,$B0,$AF,$AF,$AE,$AD,$AD,$AC,$AB,$AA,$AA,$A9,$A8,$A8,$A7,$A6,$A5,$A5,$A4,$A3,$A3,$A2,$A1,$A1,$A0,$9F
-    .byte $9E,$9E,$9D,$9C,$9C,$9B,$9A,$9A,$99,$98,$97,$97,$96,$95,$95,$94,$93,$93,$92,$91,$90,$90,$8F,$8E,$8E,$8D,$8C,$8C,$8B,$8A,$89,$89
-    .byte $88,$87,$87,$86,$85,$84,$84,$83,$82,$82,$81,$80,$80,$7F,$7E,$7D,$7D,$7C,$7B,$7B,$7A,$79,$79,$78,$77,$76,$76,$75,$74,$74,$73,$72
-    .byte $72,$71,$70,$6F,$6F,$6E,$6D,$6D,$6C,$6B,$6A,$6A,$69,$68,$68,$67,$66,$66,$65,$64,$63,$63,$62,$61,$61,$60,$5F,$5F,$5E,$5D,$5C,$5C
-    .byte $5B,$5A,$5A,$59,$58,$58,$57,$56,$55,$55,$54,$53,$53,$52,$51,$51,$50,$4F,$4E,$4E,$4D,$4C,$4C,$4B,$4A,$49,$49,$48,$47,$47,$46,$45
-    .byte $45,$44,$43,$42,$42,$41,$40,$40,$3F,$3E,$3E,$3D,$3C,$3B,$3B,$3A,$39,$39,$38,$37,$37,$36,$35,$34,$34,$33,$32,$32,$31,$30,$30,$2F
-    .byte $2E,$2D,$2D,$2D
+	.byte $CA,$CA,$CA,$C9,$C9,$C8,$C7,$C6,$C6,$C5,$C4,$C4,$C3,$C2,$C2,$C1,$C0,$BF,$BF,$BE,$BD,$BD,$BC,$BB,$BB,$BA,$B9,$B8,$B8,$B7,$B6,$B6
+	.byte $B5,$B4,$B4,$B3,$B2,$B1,$B1,$B0,$AF,$AF,$AE,$AD,$AD,$AC,$AB,$AA,$AA,$A9,$A8,$A8,$A7,$A6,$A5,$A5,$A4,$A3,$A3,$A2,$A1,$A1,$A0,$9F
+	.byte $9E,$9E,$9D,$9C,$9C,$9B,$9A,$9A,$99,$98,$97,$97,$96,$95,$95,$94,$93,$93,$92,$91,$90,$90,$8F,$8E,$8E,$8D,$8C,$8C,$8B,$8A,$89,$89
+	.byte $88,$87,$87,$86,$85,$84,$84,$83,$82,$82,$81,$80,$80,$7F,$7E,$7D,$7D,$7C,$7B,$7B,$7A,$79,$79,$78,$77,$76,$76,$75,$74,$74,$73,$72
+	.byte $72,$71,$70,$6F,$6F,$6E,$6D,$6D,$6C,$6B,$6A,$6A,$69,$68,$68,$67,$66,$66,$65,$64,$63,$63,$62,$61,$61,$60,$5F,$5F,$5E,$5D,$5C,$5C
+	.byte $5B,$5A,$5A,$59,$58,$58,$57,$56,$55,$55,$54,$53,$53,$52,$51,$51,$50,$4F,$4E,$4E,$4D,$4C,$4C,$4B,$4A,$49,$49,$48,$47,$47,$46,$45
+	.byte $45,$44,$43,$42,$42,$41,$40,$40,$3F,$3E,$3E,$3D,$3C,$3B,$3B,$3A,$39,$39,$38,$37,$37,$36,$35,$34,$34,$33,$32,$32,$31,$30,$30,$2F
+	.byte $2E,$2D,$2D,$2D
 
 PADDLE_SMALL_POSITION_TABLE ; 228 bytes of HPOS coordinates corresponding to paddle values
-    .byte $CA,$CA,$CA,$C9,$C9,$C8,$C7,$C7,$C6,$C5,$C4,$C4,$C3,$C2,$C2,$C1,$C0,$C0,$BF,$BE,$BE,$BD,$BC,$BC,$BB,$BA,$B9,$B9,$B8,$B7,$B7,$B6
-    .byte $B5,$B5,$B4,$B3,$B3,$B2,$B1,$B1,$B0,$AF,$AE,$AE,$AD,$AC,$AC,$AB,$AA,$AA,$A9,$A8,$A8,$A7,$A6,$A5,$A5,$A4,$A3,$A3,$A2,$A1,$A1,$A0
-    .byte $9F,$9F,$9E,$9D,$9D,$9C,$9B,$9A,$9A,$99,$98,$98,$97,$96,$96,$95,$94,$94,$93,$92,$92,$91,$90,$8F,$8F,$8E,$8D,$8D,$8C,$8B,$8B,$8A
-    .byte $89,$89,$88,$87,$86,$86,$85,$84,$84,$83,$82,$82,$81,$80,$80,$7F,$7E,$7E,$7D,$7C,$7B,$7B,$7A,$79,$79,$78,$77,$77,$76,$75,$75,$74
-    .byte $73,$73,$72,$71,$70,$70,$6F,$6E,$6E,$6D,$6C,$6C,$6B,$6A,$6A,$69,$68,$67,$67,$66,$65,$65,$64,$63,$63,$62,$61,$61,$60,$5F,$5F,$5E
-    .byte $5D,$5C,$5C,$5B,$5A,$5A,$59,$58,$58,$57,$56,$56,$55,$54,$54,$53,$52,$51,$51,$50,$4F,$4F,$4E,$4D,$4D,$4C,$4B,$4B,$4A,$49,$48,$48
-    .byte $47,$46,$46,$45,$44,$44,$43,$42,$42,$41,$40,$40,$3F,$3E,$3D,$3D,$3C,$3B,$3B,$3A,$39,$39,$38,$37,$37,$36,$35,$35,$34,$33,$32,$32
-    .byte $31,$30,$30,$30
+	.byte $CA,$CA,$CA,$C9,$C9,$C8,$C7,$C7,$C6,$C5,$C4,$C4,$C3,$C2,$C2,$C1,$C0,$C0,$BF,$BE,$BE,$BD,$BC,$BC,$BB,$BA,$B9,$B9,$B8,$B7,$B7,$B6
+	.byte $B5,$B5,$B4,$B3,$B3,$B2,$B1,$B1,$B0,$AF,$AE,$AE,$AD,$AC,$AC,$AB,$AA,$AA,$A9,$A8,$A8,$A7,$A6,$A5,$A5,$A4,$A3,$A3,$A2,$A1,$A1,$A0
+	.byte $9F,$9F,$9E,$9D,$9D,$9C,$9B,$9A,$9A,$99,$98,$98,$97,$96,$96,$95,$94,$94,$93,$92,$92,$91,$90,$8F,$8F,$8E,$8D,$8D,$8C,$8B,$8B,$8A
+	.byte $89,$89,$88,$87,$86,$86,$85,$84,$84,$83,$82,$82,$81,$80,$80,$7F,$7E,$7E,$7D,$7C,$7B,$7B,$7A,$79,$79,$78,$77,$77,$76,$75,$75,$74
+	.byte $73,$73,$72,$71,$70,$70,$6F,$6E,$6E,$6D,$6C,$6C,$6B,$6A,$6A,$69,$68,$67,$67,$66,$65,$65,$64,$63,$63,$62,$61,$61,$60,$5F,$5F,$5E
+	.byte $5D,$5C,$5C,$5B,$5A,$5A,$59,$58,$58,$57,$56,$56,$55,$54,$54,$53,$52,$51,$51,$50,$4F,$4F,$4E,$4D,$4D,$4C,$4B,$4B,$4A,$49,$48,$48
+	.byte $47,$46,$46,$45,$44,$44,$43,$42,$42,$41,$40,$40,$3F,$3E,$3D,$3D,$3C,$3B,$3B,$3A,$39,$39,$38,$37,$37,$36,$35,$35,$34,$33,$32,$32
+	.byte $31,$30,$30,$30
 ;
 ; That may be a pretty stupid thing to do.  It is almost 1/2K of 
 ; code blight stuff just to map the potentiomenter rotation to 
@@ -2397,7 +2433,7 @@ PADDLE_STRIKE_COLOR .byte $94
 ; disables the ball counter.
 ;
 
-         
+	     
 ENABLE_BALL_COUNTER .byte 0
 ;
 ; How many game balls remaining?  5 max.
@@ -2445,7 +2481,7 @@ BALL_COUNTER_COLOR
 ; Vertical positions in Player memory map.
 ;
 SINEWAVE
-    .byte $E0,$E2,$E4,$E6,$E6,$E5,$E4,$E1,$DF,$DC,$DB,$DA,$DA,$DC,$DE
+	.byte $E0,$E2,$E4,$E6,$E6,$E5,$E4,$E1,$DF,$DC,$DB,$DA,$DA,$DC,$DE
 
 
 ;===============================================================================
@@ -2514,12 +2550,10 @@ DISPLAYED_SCORE_CHAR_COLOR
 ; is actually the score counting ticks.)
 ; Voice 2 and 3 == score counter
 
+ENABLE_SOUND .byte 0 ; Enable sound playing. $0 = off, $1 = on.
 ;
 ; An index for each voice.
 ;
-
-ENABLE_SOUND .byte 0 ; Enable sound playing. $0 = off, $1 = on.
-
 SOUND_INDEX ; only bytes 0, 2, 4, 6 used for channels 1, 2, 3, 4.
 	.byte $00,$00,$00,$00,$00,$00,$00,$00
 
@@ -2552,3 +2586,4 @@ SOUND_AUDF_TABLE ; AUDF -- Frequency -- a little quirky tone shaping
 	.byte $40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$00
 ; index $28/40 is bounce brick 1.  A 2ms, D 168ms, S 0, R 168 ms
 	.byte $50,$50,$50,$50,$50,$50,$50,$50,$50,$50,$50,$50,$00
+	
