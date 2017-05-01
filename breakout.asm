@@ -648,7 +648,7 @@ check_sprite_background_collision
 ?is_collision
 	jsr calc_ball_xchar
 	jsr calc_ball_ychar
-	    
+		
 	ldx  ychar ; get base address for the current Y line
 	lda SCREEN_LINE_OFFSET_TABLE_LO,x 
 	sta ZEROPAGE_POINTER_1
@@ -1105,28 +1105,28 @@ display_title
 
 	lda #$00 ; On Atari internal code for blank space is 0.
 	jsr ClearScreen
-	                           
+							   
 	loadPointer ZEROPAGE_POINTER_1, TITLE1
 	lda #1                          
 	sta PARAM1                      
 	lda #3
 	sta PARAM2                      
 	jsr DisplayText
-	                                    
+										
 	loadPointer ZEROPAGE_POINTER_1, TITLE2
 	lda #1                          
 	sta PARAM1                      
 	lda #5
 	sta PARAM2                      
 	jsr DisplayText
-	                           
+							   
 	loadPointer ZEROPAGE_POINTER_1, TITLE3
 	lda #1                          
 	sta PARAM1                      
 	lda #7
 	sta PARAM2                      
 	jsr DisplayText
-	                         
+							 
 	loadPointer ZEROPAGE_POINTER_1, TITLE4
 	lda #1                          
 	sta PARAM1                      
@@ -1463,7 +1463,7 @@ DisplayByte
 	sta (ZEROPAGE_POINTER_1),y                      ; write the character code
 	iny ; writes left to right.
 	lda PARAM4                                      ; fetch the byte to DisplayText
-	                                  
+									  
 	and #$0F ; low nybble is second character
 	tax
 	lda NYBBLE_TO_HEX,x  ; simplify. no math.  just lookup table.
@@ -1483,7 +1483,7 @@ sound_bing  ; bing/buzz on drop ball
 	lda #$01 ; index to bing sound in sound tables.
 	sta SOUND_INDEX
 
-	    rts
+		rts
 
 
 sound_bounce ; hit a brick.
@@ -2212,7 +2212,7 @@ SOUND_AUDF_TABLE ; AUDF -- Frequency -- a little quirky tone shaping
 ; Screen Line Offset Tables
 ; Query a line with lda (POINTER TO TABLE),x (where x holds the line number)
 ; and it will return the screen address for that line.
-	                                              
+												  
 SCREEN_LINE_OFFSET_TABLE_LO        
 ; An atasm gymnastic to build the table at assembly time....
 	entry .= 0
