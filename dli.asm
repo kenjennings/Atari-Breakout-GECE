@@ -261,9 +261,22 @@ DLI_3
 	;
 	; Set the Boom animation postitions.
 	; Hopefully, this is enough load/stores to cross the end of the blank scan line...  
-	; If not then a wsync needs to be inserted.  somewhere.
+	; If not then a wsync needs to be inserted.  somewhere.  hope not.  The end
+	;  of the loop already did a wsync when it corrected the scrolling, so
+	; it might mean the rows from 2 to 8 have the boom animations setting 
+	; written one scan line too high....  thinking.   thinking....
 DLI3_DO_BOOM_AND_BRICKS
 	lda BOOM_1_HPOS,x
+	sta WSYNC ; need to drop one line more to line up with boom lines.
+	; six sta, five lda after wsync.   this is unlikely to work well.
+	; At least there's no graphics or character set DMA on this line.
+	; Highly possible that this will need to be reduced to 1 Boom animation
+	; object which is the least desireable choice. 
+	; Otherwise, the the Boom animation height cannot exceed the height of the 
+	; bricks.  The alternate plan means there would be two completely blank 
+	; scan line to affect all the changes, so that will definitely work well.
+	; (And, this could be used to reduce the gap between brick lines to one scan 
+	; line compressing the brick playfield by 7 scan lines, nearly one full text line.)
 	sta HPOSP1
 	lda BOOM_2_HPOS,x
 	sta HPOSP2
@@ -287,7 +300,7 @@ DLI3_DO_BOOM_AND_BRICKS
 	
 	; ANTIC is now having a small brain fart and stuttering
 	; for several scan lines.  Apply color to those lines.
-	lda BRICK_CURRENT_COLOR,x
+	ldy BRICK_CURRENT_COLOR,x
     sta WSYNC
 	sta COLPF0                ; scan line 1
 	iny
@@ -312,10 +325,16 @@ DLI3_DO_BOOM_AND_BRICKS
 	sta WSYNC
 	sta VSCROL
  
+    ; thinking...  that vscroll correction happens at the last line
+    ; a brick line.  therefore , this jump to loop happens on the 
+    ; first blank line after the bricks...  This means the loop writes
+    ; new boom animation settings one line too high...  So, there 
+    ; needs to be a wsync either here, or at the  beginning of the 
+    ; loop  to drop down one more line.
 	inx                   ; next line
 	cpx #8                
 	bne DLI3_DO_BOOM_AND_BRICKS
-	
+
 End_DLI_3 ; End of routine.  Point to next routine.
 	lda #<DLI_4
 	sta VDSLST
@@ -329,28 +348,50 @@ End_DLI_3 ; End of routine.  Point to next routine.
 	pla
 	
 	rti
-	
-	
-	
-	
-	
+
+
+; DLI4: Set Narrow Width, Set the mode 3 chracter set. 
+; Set VSCROLL for window. 
+; Fade text in.  
+
+; Sets the narrow screen size for the scrolling credits window.  
+; It provides a few more cycles for the MAIN code, but its not 
+; like I'm counting cycles.  (Yet.)
+
 DLI_4
 	pha
 	txa
 	pha
-	tya
-	pha
 
-	; Magic here
-	
+	; set the Mode 3 character set.
+	lda #>CHARACTER_SET_00
+    sta CHBASE
+	; set the fine scroll for the credits.
+	lda SCROLL_CURRENT_VSCROLL
+	sty VSCROL
+	; Set Narrow screen.
+	lda #[ENABLE_DL_DMA|ENABLE_PM_DMA|PLAYFIELD_WIDTH_NARROW|PM_1LINE_RESOLUTION]
+	sta DMACTL
+	; set black text background.
+	ldx #$00
+	stx COLPF2
+
+	; Fade in the scrolling text window.
+	; X is already 0.
+Loop_Fade_In_Scroll_Text
+    stx WSYNC
+    stx COLPF1   ; Set new text color (luminance)
+    inx          ; 
+    inx          ; Next luminance value
+    cpx #16      ; reached the end?
+    bne Loop_Fade_In_Scroll_Text ; No.  Continue updates.
+
 End_DLI_4 ; End of routine.  Point to next routine.
 	lda #<DLI_5
 	sta VDSLST
 	lda >#DLI_5
 	sta VDSLST+1
 
-	pla
-	tay
 	pla
 	tax
 	pla
