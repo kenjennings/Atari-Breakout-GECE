@@ -746,7 +746,8 @@ BRICK_BASE
 	; These are ANTIC Mode 3 lines so each is 10 scan lines tall.
 
 	; Scan line 134-141, screen line 127-134,   Eight blank scan lines
-	.byte DL_BLANK_8|DL_DLI   
+	.byte DL_BLANK_7|DL_DLI   
+	.byte DL_BLANK_1    ; space for DLI to make changes.
 	; DLI4: Set Narrow Width, VSCROLL for window. Fade text in.  
 
 	; Scan line 142-151, screen line 135-144,   10 Lines Mode 3
