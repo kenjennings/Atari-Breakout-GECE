@@ -38,8 +38,8 @@ CTBFLG = $07 ; nonzero value means Right/B  cartridge present
 
 WARMST = $08 ; Warmstart flag. 0 = powerup in progress. $FF normal reset occurred.
 BOOT =   $09 ; Boot status. 0 = no boot.  
-    ; 1 = disk boot OK.  do reset via DOSVEC
-    ; 2 = cassette boot OK. do reset via CASINI
+	; 1 = disk boot OK.  do reset via DOSVEC
+	; 2 = cassette boot OK. do reset via CASINI
 	; 3 = both successful. (trap reset via CASINI).
 
 DOSVEC = $0A ; word. Entry vector for DOS (actually to start DUP.SYS).
