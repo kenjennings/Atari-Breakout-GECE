@@ -225,7 +225,7 @@ Title_FlyIn
 
 	ldx TITLE_HPOS0 ; if this is non-zero then a letter is in motion
 	bne FlyingChar
- 	ldx TITLE_CURRENT_FLYIN ; if this is 8 then we should  be in admiration mode
+	ldx TITLE_CURRENT_FLYIN ; if this is 8 then we should  be in admiration mode
 	cpx #8  ; The scroller will reset this to 0 when done.
 	bne FlyInStartChar
 	
@@ -241,7 +241,7 @@ Title_FlyIn
 FlyInStartChar
 	lda #$FE ; extreme right side
 	sta TITLE_HPOS0 ; new horizontal position.
- 	ldx TITLE_CURRENT_FLYIN ; which character ?
+	ldx TITLE_CURRENT_FLYIN ; which character ?
 
 	ldy TITLE_DLI_PMCOLOR_TABLE,x ; Tell DLI which color for Flying letter
 	sty TITLE_DLI_PMCOLOR
@@ -255,7 +255,7 @@ Copy_Char_Image_To_PM
 	ldy TITLE_PM_IMAGE_LIST,x ; get starting image offset for character
 	ldx #25 ; destination scan line
 CopyCharToPM
-	lda CHARACTER_SET,y ; copy from character set
+	lda CHARACTER_SET_01+$A8,y ; copy from character set
 	sta PMADR_BASE0,x ; to the P/M image memory
 	iny
 	inx
