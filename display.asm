@@ -145,10 +145,10 @@ CHARACTER_SET_00
 CHARACTER_SET_01
 	.incbin "breakout.cset"
 ; Mode 6 custom character set
-; 2x by 8 line chars for the 
-; mode 6 title text:  B R E A K O U T
-; and for 0 - 9
-; and for ball counter
+; 2x chars for 0 to 9. 1-10 (top) and 11-20 (bottom)
+; 2x chars for title text:  
+; B R E A K O U T $15-$24 (top/bottom interleaved)
+; 3 chars for ball counter label "BALLS" ($25-$27)
 
 ; Character set is 1/2K of data, so
 ; alignment does not need to be forced here.
@@ -787,7 +787,7 @@ DISPLAY_LIST_TEXT_SCROLL_7
 	.word CENTER_SCROLL_00
 	
 	; Scan line 203-204, screen line 196-197,   Two blank scan lines 	
-	.byte DL_BLANK_8|DL_DLI; 
+	.byte DL_BLANK_2|DL_DLI; 
 	
 	; DLI6:
 	; Sets Paddle specs. PMWIDTH, HPOS, HKernel changes colors for paddle.
@@ -1014,8 +1014,11 @@ TITLE_FRAME_TABLE
 TITLE_CURRENT_FLYIN 
 	.byte 0 ; current index (0 to 7) into tables for visible stuff in table below.
 
+; Character base offset to data for custom BREAKOUT characters
+; is the character set base + $A8.  Use that as starting address 
+; and add the following.  Basically a table of Nth character * 16.
 TITLE_PM_IMAGE_LIST ; beginning offset into character set to copy image data to Player
-	.byte $08,$18,$28,$38,$48,$58,$68,$78
+	.byte $00,$10,$20,$30,$40,$50,$60,$70
 
 TITLE_PM_TARGET_LIST ; Player target HPOS
 	entry .= 0
@@ -1023,9 +1026,11 @@ TITLE_PM_TARGET_LIST ; Player target HPOS
 	.byte >[PLAYFIELD_LEFT_EDGE_NARROW+4+entry]
 	entry .= entry+16 ; next entry in table.
 	.endr
-	
+
+; B R E A K O U T custom chars in different COLPF values
 TITLE_CHAR_LIST ; Screen byte of first (top) half of each character 
-	.byte $01,$43,$85,$C7,$09,$4B,$8D,$CF ; B R E A K O U T custom chars in different COLPF values
+	.byte $15,$17+$40,$19+$80,$1b+$C0
+	.byte $1d,$1f+$40,$21+$80,$23+$C0 
 
 TITLE_PM_CHAR_POS ; Title Line offset for each character
 	.byte 22,24,26,28,30,32,34,36 
@@ -1708,8 +1713,8 @@ BRICK_CURRENT_HSCROL .byte 0,0,0,0,0,0,0,0
 ; the original game and elsewhere on the screen.
 ;
 BRICK_CURRENT_COLOR ; Base color for gradient
-    .byte COLOR_PINK+2,  COLOR_PURPLE+2,     COLOR_RED_ORANGE+2,  COLOR_ORANGE2+2
-    .byte COLOR_GREEN+2, COLOR_BLUE_GREEN+2, COLOR_LITE_ORANGE+2, COLOR_ORANGE_GREEN+2
+	.byte COLOR_PINK+2,  COLOR_PURPLE+2,     COLOR_RED_ORANGE+2,  COLOR_ORANGE2+2
+	.byte COLOR_GREEN+2, COLOR_BLUE_GREEN+2, COLOR_LITE_ORANGE+2, COLOR_ORANGE_GREEN+2
 ;
 ; MAIN code sets the following sets of configuration
 ; per each line of the playfield.  VBI takes these
@@ -2310,27 +2315,28 @@ SUBTITLE_SCROLL_TABLE_SIZE=19  ; Address/words up to here, then loop around
 ; Paddle is built of Players 1, 2, and 3 to provide a 
 ; little extra horizontal detail/coloring.
 ; Use Players 1+2 multi-color for more color.
-; 1 = $94
-; 2 = $98
-; X = 1+1 = $9C
-; 3 = $7E ? 
+; 1 = $7E
+; 2 = $94
+; X = 2+3 = $9C
+; 3 = $98
 ;
-; DLI recolors top line of COLPM1 for strike animation.
+; DLI recolors top line of COLPM3 for strike animation.
 ;
 ;Normal:
 ;
-; 33111133 = 33....33 + ........ + ..1111..  == $C3 + $00 + $3C
-; 3X2112X3 = 3......3 + .22..22. + .1.11.1.  == $81 + $66 + $5A
-; X211112X = ........ + 22....22 + 1.1111.1  == $00 + $C3 + $BD
-; .221122. = ........ + .22..22. + ...11...  == $00 + $66 + $18
+; 11333311 = 11....11 + ........ + ..3333..  == $C3 + $00 + $3C
+; 1X2332X1 = 1......1 + .22..22. + .3.33.3.  == $81 + $66 + $5A
+; X233332X = ........ + 22....22 + 3.3333.3  == $00 + $C3 + $BD
+; .223322. = ........ + .22..22. + ...33...  == $00 + $66 + $18
 ; 
-; Small:
+; Sm3ll:
 ;
-; 33133... = 33.33... + ........ + ..1.....  == $D8 + $00 + $20
-; 3X2X3... = 3...3... + .222.... + .1.1....  == $44 + $70 + $50
-; X212X... = ........ + 22.22... + 1.1.1...  == $00 + $D8 + $A8
+; 11311... = 11.11... + ........ + ..3.....  == $D8 + $00 + $20
+; 1X2X1... = 1...1... + .222.... + .3.3....  == $44 + $70 + $50
+; X232X... = ........ + 22.22... + 3.3.3...  == $00 + $D8 + $A8
 ; .222.... = ........ + .222.... + ........  == $00 + $70 + $00
-;   
+
+
 ENABLE_PADDLE .byte 0 ; Paddle displayed on screen?  0 = no.  1 = yes.
 
 ; MAIN sets paddle image.  VBI set HPOS based on size.
@@ -2372,8 +2378,8 @@ PADDLE_HPOS .byte 0 ; VBI to DLI: X position of Player(s) making up paddle.
 
 ; CURRENT STATE:
 ; Paddle is made of several Player objects providing 
-; additional horizontal color.  A DLI makes vertical 
-; shading in the main colors.
+; additional horizontal color.  
+; (TODO? : A DLI makes vertical shading in the main colors.)
 
 ; FUTURE ENHANCEMENT:
 ; The paddle reacts to ball proximity and strikes similar 
@@ -2392,7 +2398,7 @@ PADDLE_STRIKE .byte $00
 PADDLE_FRAME .byte 0 ; 9 to 0 
 ;
 ; VBI sets the color of the top line of the paddle 
-; (COLPM1) when the MAIN signals that the paddle 
+; (COLPM3) when the MAIN signals that the paddle 
 ; was struck.  9 to 0
 ;
 PADDLE_STRIKE_COLOR_ANIM
