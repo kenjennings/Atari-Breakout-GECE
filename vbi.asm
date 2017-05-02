@@ -1354,5 +1354,3 @@ Restore_Score_Display
 	sta DISPLAY_LIST_SCORE_LMS+4
 	
 	rts
-	
-	
