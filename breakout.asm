@@ -25,195 +25,90 @@
 ;===============================================================================
 
 ;===============================================================================
-; This is a very simple implementation of Breakout with color scheme similar 
-; to the original arcade game that presented "color" via plastic overlays.
-; It includes a retro-thematically (I made a new word) consistent title screen.
-; It does not have some features of the typical game implementation:
-; * The ball moves at a constant speed (60 fps x 1 pixel in X and Y 
-;   directions per frame).  There is no speedup.
-;
-; * The ball travels at a constant angle +/- 1 pixel in X and Y.  There
-;   is no angle control or direction change based on the location the 
-;   ball hits the paddle.
-;
-; * The paddle stays a consistent size.  The ball rebounding down from the 
-;   top border does not trigger size reduction of the paddle.
-;=============================================================================== 
-; =================== Random Atari Notes and Ramblings of Ken ==================
-; * The goal here is to make this work on the Atari with only the most minimal
-;   changes necessary.  Full on Atari mode would press a lot of fun buttons:
-;   mixed display modes, display list interrupts, etc. to ramp up the 
-;   visuals (so, stay tuned for beta version... :-)
-;
-; * The startup and order of execution confused the hack out of me.
-;   Some of it is still confusing.  There are two kinds of main program
-;   loops.  Initially, I could not figure out how to get the user-
-;   playable part running, and then eventually figured out the only 
-;   place in the code that ran the user input was commented out and
-;   replaced by automatic paddle movement.  Ah, ha!  But, had hacked
-;   up some things and possibly damaged how/when the game transitions
-;   between title screen and game play.
-;
-; * The C64 version originally defined $0400 as screen memory. On the Atari
-;   low memory up to page 6 is defined for various OS purposes. The Atari 
-;   port defines the screen memory base at $4000 which is the value used in 
-;   the Machine Language Project 1.3 demo.
-; 
-; * Since Atari doesn't use color cells something else has to be done for 
-;   color blocks.  The game conveniently uses only four colors for blocks, so 
-;   that allows for a few possibilities. ANTIC text modes 4, 5, 6, and 7 have
-;   four colors not including the background. The blocks are large without 
-;   detail, so any of the text modes could be used. However, the game also has
-;   to display readable text. To keep it fairly consistent with the C64 means 
-;   40 columns and 25 lines which reduces the possibilities to ANTIC mode 4.
-;
-; * ANTIC mode 4 means making a custom character set to display the necessary 
-;   text and the blocks. This means there must be text in the character set,
-;   26 letters and 10 numbers for each color needed.  The next problem 
-;   encountered is that the blocks are not merely a few inverse spaces, but 
-;   actually six different graphics characters grouped to appear to be 
-;   a few adjacent inverse blocks. This means there must also be six custom
-;   characters defined for each color of block.  And all this must fit into
-;   the Atari's 128 character font.  Therefore, compromises...
-;   There is an A-Z set defined for three colors (and the fourth color is
-;   displayed by presenting inverse characters of one of the three sets.)
-;   There is only one complete set of numbers 0 to 9 in one color.
-;   The six characters needed per block are crammed in over various symbol 
-;   characters and punctuations.
-;
-; * Text is not shown on the same lines as color blocks, so the font 
-;   cramming problem could be solved by multiple character sets and a
-;   display list interrupt. But, this is intended to be implemented as
-;   simply as possible.
-; 
-; * Note that the screen display is the same 200 scanline/25 lines of 
-;   text that the C64 displays.  Contrary to popular myth the Atari is not
-;   limited to 192 scan lines (thanks, Tramiel C64 marketing). The Atari
-;   can do vertical overscan up to 240 scan lines without any tricks...
-;   just define the display list to show that many lines.
-;
-; * Sprites are not a serious problem here.  Only two are used.  The
-;   paddle is a giant block.  No problems there.  The ball is not 
-;   over defined or animated, so the C64 sprite to Atari Player 
-;   conversion is not difficult.  In fact, the amount of code on the
-;   Atari port to fiddle with Players is rather overdone.
-;
-; * The Atari OS takes care of a lot of drudgery automatically, and 
-;   among these are managing controller input.  Since this makes 
-;   paddle (aka potentiometer) management a no-brainer, the Atari 
-;   port of Breakout uses an actual paddle for direct input to the 
-;   on screen paddle. This makes the paddle on screen highly responsive.  
-;   There's nothing like a real paddle for paddle games.
-;
-; * I've never worked on audio in assembly before.  This will be 
-;   interesting.  Providing sound shaping over time means inserting 
-;   audio checking and evaluation at any opportunity that provides
-;   synchronization.  In Atari terms that would mean a vertical 
-;   blank interrupt routine.  That's a tad toward the bells and 
-;   whistles side of things.  The C64 version does implement a 
-;   braking system based on monitoring for the end of frame. This
-;   is good enough for timing considerations, so the sound service
-;   are called any time the frame wait is called.
-;
-; * The audio routines use a simple table of audio control and
-;   frequency values. The routine feeds a value to POKEY from the 
-;   table once per video frame.  This is sufficient for providing a 
-;   few  beeps and boops.
-;
+;   ATARI SYSTEM INCLUDES
 ;===============================================================================
-; UPDATES V 1.0A
-;===============================================================================
-; * Fixed a Stupid Ken-ism that had a trailing pixel behind the ball
-;   due to not clearing the last byte when rippling the image up or
-;   down.
+; Various Include files that provide equates defining 
+; registers and the values used for the registers:
 ;
-; * Fixed another stupid Ken trick that caused levels to end before
-;   all the bricks are gone.  (Brick counter updates were incorrect.)
-;
-; * Got the main control into a headlock and made it say Uncle.  There
-;   is now correct progression from Title, to main game, and end of
-;   game.  Pressing the button goes to the next screen.  
-;
-; * Automatic play is working.  If left alone for approx 30 seconds
-;   the game will automatically progress to the next screen.   
-;
-; * Sound is intentionally suppressed during the automatic game play.
-; 
-; * After the first loop through of automatic play, the Atari 
-;   Attract mode/color cycling is intentionally engaged.
-;
-; * Pressing a button during automatic play will return to the 
-;   title screen (and turn off the Attract mode if it is on.) 
-;
-;===============================================================================
-; UPDATES V 1.0B
-;===============================================================================
-; * Removed all the commented C64 code.   Dramatically cleans this up.
-;===============================================================================
- 
-;===============================================================================
-; CONSTANTS
-;===============================================================================
-
-SCREEN_MEM = $4000				   ; Bank 1 - Screen 0
-
-; The Atari equivalents for the custom chip 
-; hardware registers are in the various 
-; include files read later. 
-
-;===============================================================================
-; ZERO PAGE VARIABLES
-;===============================================================================
-; These will be used to pass parameters to routines
-; when you can't use A, X, Y registers for other reasons.
-; Essentially, think of these as extra data registers.
-
-; The Atari OS has defined purpose for most of the Page Zero 
-; locations used on the C64, so other locations need to be chosen.
-; Since no Floating Point will be used here we'll borrow the FP 
-; registers in Page Zero.
-; Also, define a few extra registers to handle any Atari-specific
-; functions wihtout disturbing the values defined for C64 code.
-
-PARAM1 =   $D6     ; FR0 $D6
-PARAM2 =   $D7     ; FR0 $D7
-PARAM3 =   $D8     ; FR0 $D8
-PARAM4 =   $D9     ; FR0 $D9
-PARAM5 =   $DA     ; FRE $DA
-PARAM6 =   $DB     ; FRE $DB  Added for Atari extras
-PARAM7 =   $DC     ; FRE $DC  Added for Atari extras
-PARAM8 =   $DD     ; FRE $DD  Added for Atari extras
-
-ZEROPAGE_POINTER_1 =   $DE     ; FRE $DE/DF
-ZEROPAGE_POINTER_2 =   $E0     ; FR1 $E0/$E1
-ZEROPAGE_POINTER_3 =   $E2     ; FR1 $E2/$E3
-ZEROPAGE_POINTER_4 =   $E4     ; FR1 $E4/$E5 
-ZEROPAGE_POINTER_5 =   $E6     ; FR2 $E6/$E7  Added for Atari extras
-ZEROPAGE_POINTER_6 =   $E8     ; FR2 $E8/$E9  Added for Atari extras
-ZEROPAGE_POINTER_7 =   $EA     ; FR2 $EA/$EB  Added for Atari extras
-ZEROPAGE_POINTER_8 =   $EC     ; FRX/EEXP $EC/$ED  Added for Atari extras
-ZEROPAGE_POINTER_9 =   $EE     ; NSIGN/ESIGN $EE/$EF  Added for Atari extras
-
-
-;===============================================================================
-;	Atari System Includes
-;===============================================================================
-; Atari uses a structured executable file format that loads data to  
-; specific memory and provides an automatic run address.
-; There is no need to interact with BASIC.
-
-	.include "DOS.asm" ; This provides the LOMEM, start, and run addresses.
-
-	*=$5000
-;	*=LOMEM_DOS     ; $2000  ; After Atari DOS 2.0s
-;	*=LOMEM_DOS_DUP ; $3308  ; Alternatively, after Atari DOS 2.0s and DUP
-
-	.include "macros.asm"
-	.include "ANTIC.asm"
+	.include "ANTIC.asm" 
 	.include "GTIA.asm"
 	.include "POKEY.asm"
 	.include "PIA.asm"
 	.include "OS.asm"
+	.include "DOS.asm" ; This provides the LOMEM, start, and run addresses.
+
+	.include "macros.asm"
+
+
+;===============================================================================
+;   VARIOUS CONSTANTS AND LIMITS
+;===============================================================================
+; Let's define some useful offsets and sizes. 
+; Could become useful somewhere else.
+;
+BRICK_LEFT_OFFSET =   3  ; offset from normal playfield left edge to left edge of brick 
+BRICK_RIGHT_OFFSET =  12 ; offset from normal playfield left edge to the right edge of first brick
+BRICK_PIXEL_WIDTH =   10 ; Actual drawn pixels in brick.
+BRICK_WIDTH =         11 ; including the trailing blank space separating bricks 
+
+BRICK_TOP_OFFSET =     78  ; First scan line of top line of bricks. just a guess right now
+BRICK_TOP_END_OFFSET = 82  ; Last scan line of the top line of bricks.
+BRICK_BOTTOM_OFFSET =  133 ; Last scan line of bottom line of bricks.
+BRICK_LINE_HEIGHT =    5   ; Actual drawn graphics scanlines.
+BRICK_HEIGHT =         7   ; including the following blank lines (used when multiplying for position) 
+;
+; Playfield MIN/MAX travel areas relative to the ball.
+;
+MIN_PIXEL_X = PLAYFIELD_LEFT_EDGE_NORMAL+BRICK_LEFT_OFFSET
+MAX_PIXEL_X = MIN_PIXEL_X+152 ; Actual last color clock of last brick.
+MIN_BALL_X =  MIN_PIXEL_X ; because PM/left edge is same
+MAX_BALL_X =  MAX_PIXEL_X-1 ; because ball is 2 color clocks wide
+
+MIN_PIXEL_Y = 53 ; Top edge of the playfield.  just a guess right now.
+MAX_PIXEL_Y = 230 ; bottom edge after paddle.  lose ball here.
+
+; Ball travel when bouncing from walls and bricks will simply negate 
+; the current horizontal or vertical direction.
+; Ball travel when bouncing off the paddle will require lookup tables
+; to manage angle (and speed changes).
+;
+; Playfield MIN/MAX travel areas relative to the Paddle.
+;
+; Paddle travel is only horizontal. But the conversion from paddle 
+; value (potentiometer) to paddle Player on screen will have different
+; tables based on wide paddle and narrow paddle sizes.
+; The paddle also is allowed to travel beyond the left and right sides
+; of the playfield far enough that only an edge of the paddle is 
+; visible for collision on the playfield.
+; The size of the paddle varies the coordinates for this.
+;
+; Paddle limits:
+; O = Offscreen/not playfield
+; X = ignored playfield 
+; P = Playfield 
+; T = Paddle Pixels
+;
+; (Normal  Left)     (Normal Right)
+; OOOxxxPP           PPxxxxOOO 
+; TTTTTTTT           TTTTTTTT
+; MIN = Playfield left edge normal - 3
+; MAX = Playfield right edge - 5
+;
+; (Small  Left)     (Small Right)
+; OOOxxxPP           PPxxxxOOO 
+;    TTTTT           TTTTT
+; MIN = Playfield left edge normal
+; MAX = Playfield right edge - 5
+;
+PADDLE_NORMAL_MIN_X = PLAYFIELD_LEFT_EDGE_NORMAL-3
+PADDLE_NORMAL_MAX_X = PLAYFIELD_RIGHT_EDGE_NORMAL-5
+
+PADDLE_SMALL_MIN_X = PLAYFIELD_LEFT_EDGE_NORMAL
+PADDLE_SMALL_MAX_X = PLAYFIELD_RIGHT_EDGE_NORMAL-5
+
+; FYI:
+; PLAYFIELD_LEFT_EDGE_NORMAL  = $30 ; First/left-most color clock horizontal position
+; PLAYFIELD_RIGHT_EDGE_NORMAL = $CF ; Last/right-most color clock horizontal position
 
 ;  Offset to make binary 0 to 9 into text  
 ; 48 for PETSCII/ATASCII,  16 for Atari internal
@@ -226,13 +121,119 @@ NUM_BIN_TO_TEXT = 16
 ; Then, this needs to subtract 11 (12-1) for the size of the paddle, == $93.
 PADDLE_MAX = (PLAYFIELD_RIGHT_EDGE_NORMAL-PLAYFIELD_LEFT_EDGE_NORMAL-11)
 
-; ===========================================================================
-; MAIN GAME CONTROL LOOP
-; ===========================================================================
+;===============================================================================
+;    ZERO PAGE VARIABLES
+;===============================================================================
+; These will be used when needed to pass extra parameters to 
+; routines when you can't use A, X, Y registers for other reasons.
+; Essentially, think of these as extra data registers.
 
-PRG_START
+; The Atari OS has defined purpose for most of the Page Zero 
+; locations.  Since no Floating Point will be used here we'll 
+; borrow the FP registers in Page Zero.
+
+PARAM1 =   $D6     ; FR0 $D6
+PARAM2 =   $D7     ; FR0 $D7
+PARAM3 =   $D8     ; FR0 $D8
+PARAM4 =   $D9     ; FR0 $D9
+PARAM5 =   $DA     ; FRE $DA
+PARAM6 =   $DB     ; FRE $DB 
+PARAM7 =   $DC     ; FRE $DC  
+PARAM8 =   $DD     ; FRE $DD  
+
+ZEROPAGE_POINTER_1 =   $DE     ; 
+ZEROPAGE_POINTER_2 =   $E0     ; 
+ZEROPAGE_POINTER_3 =   $E2     ; 
+ZEROPAGE_POINTER_4 =   $E4     ; 
+ZEROPAGE_POINTER_5 =   $E6     ; 
+ZEROPAGE_POINTER_6 =   $E8     ; 
+ZEROPAGE_POINTER_7 =   $EA     ; 
+ZEROPAGE_POINTER_8 =   $EC     ; 
+ZEROPAGE_POINTER_9 =   $EE     ; ZTITLE_COLPM0 -- VBI sets for DLI to use
+
+;===============================================================================
+;   LOAD START
+;===============================================================================
+
+;	*=LOMEM_DOS     ; $2000  ; After Atari DOS 2.0s
+;	*=LOMEM_DOS_DUP ; $3308  ; Alternatively, after Atari DOS 2.0s and DUP
+
+; This will not be a terribly big or complicated game.  Begin after DUP.
+
+	*=$3400 
+
+;===============================================================================
+
+
+;===============================================================================
+;   VARIABLES AND DATA
+;===============================================================================
+
+ball_count
+	.byte $05
+
+brick_points 
+	.byte $00
+
+isBrick 
+	.byte $00
+
+brick_count 
+	.byte $28
+
+xchar   
+	.byte $00
+
+ychar   
+	.byte $00
+
+dir_x   
+	.byte $00
+
+dir_y   
+	.byte $01
+
+score 
+	.byte $00, $00
+; A thought... The digits to screen conversion would work 
+; out easier if the individual digits were kept in separate 
+; bytes and not BCD packed. 
+; Altering this would be a mod for beta version.
+
+mr_roboto
+	.byte $01  ; flag if the game play is in automatic mode.
+
+auto_next
+	.byte $00 ; flag when timer counted (29 sec). Used on the
+			; title and game over  and auto play screens. When auto_wait
+			; ticks it triggers automatic transition to the 
+			; next screen.
+
+
+;===============================================================================
+;	GAME INTERRUPT INCLUDES
+;===============================================================================
+
+	.include "vbi.asm"
+
+	.include "dli.asm"
+
+
+;===============================================================================
+;   MAIN GAME CONTROL LOOP
+;===============================================================================
+
+;===============================================================================
+; Program Start/Entry.  This address goes in the DOS Run Address.
+PRG_START 
+;===============================================================================
+
 	jsr setup  ; setup graphics
-	jsr setup_sprites;
+
+
+FOREVER
+	jmp FOREVER
+
 
 	; ========== TITLE SCREEN ==========
 
@@ -320,9 +321,9 @@ skip_attract
 	rts ; never reaches here.
 
 
-; ===========================================================================
-; basic  setup. Stop sound. Create screen.
-; ===========================================================================
+;===============================================================================
+;   Basic setup. Stop sound. Create screen.
+;===============================================================================
 setup
 ; Make sure 6502 decimal mode is not set -- not  necessary, 
 ; but it makes me feel better to know this is not on.
@@ -390,9 +391,9 @@ setup_sprites
 	rts
 
 
-;========================================
-; MAIN GAME CYCLE
-;=========================================
+;===============================================================================
+;   MAIN GAME CYCLE
+;===============================================================================
 game_cycle
 	; The paddle control/movement is only 
 	; called once, because the Atari version 
@@ -417,7 +418,7 @@ game_checks
 
 	rts
 
-;=====================================
+;===============================================================================
 ; ===== Atari ======
 ; Player specs...
 ; ===== HORIZONTAL ======
@@ -431,12 +432,12 @@ game_checks
 ; Therefore...
 ; It is safe to clip paddle value to 
 ; fit the screen.
-;=====================================
+;===============================================================================
 
 
-;=====================================
-; MOVE PADDLE
-;=====================================
+;===============================================================================
+;   MOVE PADDLE
+;===============================================================================
 move_paddle
 	lda PADDL0; ; Atari -- using real paddles (or the mouse in an emulator)
 
@@ -498,9 +499,9 @@ move_paddle_right
 	rts  
 
 
-;=====================================
-; MOVE BALL
-;=====================================
+;===============================================================================
+;   MOVE BALL
+;===============================================================================
 move_ball
 	jsr move_ball_horz
 	jsr move_ball_vert
@@ -597,9 +598,9 @@ continue_game
 	rts
 
 
-;===============================
-; G A M E   O V E R
-;===============================
+;===============================================================================
+;   G A M E   O V E R
+;===============================================================================
 game_over
 ; On Atari just move 
 ; players off screen...
@@ -618,9 +619,9 @@ game_over
 
 
 .local        
-;============================================
-; CHECK FOR BALL/PADDLE SPRITE COLLISION
-;============================================
+;===============================================================================
+;   CHECK FOR BALL/PADDLE SPRITE COLLISION
+;===============================================================================
 check_sprite_collision
 	lda P1PL ; Player 1 to player collision
 	and #COLPMF0_BIT ; Player 1 to Player 0
@@ -637,9 +638,9 @@ exit_check_sprite_collision
 
 
 .local
-;============================================
-; CHECK FOR BALL/BACKGROUND COLLISION
-;============================================
+;===============================================================================
+;   CHECK FOR BALL/BACKGROUND COLLISION
+;===============================================================================
 check_sprite_background_collision
 	lda P1PF ; Player 1 to Playfield collisions
 	and #(COLPMF0_BIT|COLPMF1_BIT|COLPMF2_BIT|COLPMF3_BIT) ; all four colors
@@ -706,12 +707,12 @@ check_sprite_background_collision
 	rts
 
 		
-;=============================================
-; CALCULATE POINTS SCORE
+;===============================================================================
+;   CALCULATE POINTS SCORE
 ;       outputs point value to "brick_points"
 ;       calls routines to update score total "add_score"
 ;       and display updated score "display_score"
-;==============================================
+;===============================================================================
 calc_brick_points
 	clc
 	lda ychar  ; Y "character" position of ball
@@ -744,9 +745,9 @@ save_brick_points
 	rts
 
 
-;========================
-; RESET PLAYFIELD
-;========================
+;===============================================================================
+;   RESET PLAYFIELD
+;===============================================================================
 reset_playfield
 	jsr draw_playfield
 	
@@ -766,9 +767,9 @@ reset_playfield
 
 
 .local
-;=========================
-; RESET BALL 
-;=========================
+;===============================================================================
+;   RESET BALL 
+;===============================================================================
 reset_ball
 	jsr AtariClearBallImage ; Erase ball image at last Y position
 ; Since the ball is "animated" (i.e. it moves in X and Y directions)
@@ -809,9 +810,11 @@ display_char_coord
 
 
 .local
-;=================================================
-; CALCULATE THE BALL'S X CHARACTER CO-ORDINATE
+;===============================================================================
+;   CALCULATE THE BALL'S X CHARACTER CO-ORDINATE
+;===============================================================================
 ; for Atari that's xchar = ( Player X - left ) / 4
+;===============================================================================
 calc_ball_xchar
 	lda BALL_PLAYER_X
 	sec
@@ -823,9 +826,11 @@ calc_ball_xchar
 	rts
 
 
-;==============================================
-; CALCULATE THE BALLS Y CHARACTER CO-ORDINATE
+;===============================================================================
+;   CALCULATE THE BALLS Y CHARACTER CO-ORDINATE
+;===============================================================================
 ; ychar = (sprite0_y - top) / 8
+;===============================================================================
 calc_ball_ychar
 	lda BALL_PLAYER_Y
 	sec
@@ -841,12 +846,13 @@ calc_ball_ychar
 	rts
 
 
-;===========================================
-; CHECK CHAR IS A BRICK CHARACTER
+;===============================================================================
+;   CHECK CHAR IS A BRICK CHARACTER
+;===============================================================================
 ; Register A holds character code to check
 ; output boolean value to 'isBrick'
 ; 0 = false , 1 = true
-;===========================================
+;===============================================================================
 ; From the Atari perspecive, blank spaces are 0, and
 ; anything not a blank is non-zero.  Therefore any
 ; non-zero character is a brick.
@@ -870,8 +876,9 @@ is_a_brick
 	rts
 
 
-;===========================================
-; START GAME 
+;===============================================================================
+;   START GAME 
+;===============================================================================
 ; reset everything about the game.
 ; clear sound
 ; draw game playfield
@@ -879,7 +886,7 @@ is_a_brick
 ; reset brick count 
 ; zero score 
 ; set new ball count
-;===========================================
+;===============================================================================
 start_game
 	lda #$00 ; Atari blank space internal code
 	jsr ClearScreen
@@ -906,9 +913,9 @@ start_game
 	rts
 
 
-;=====================
-; DRAW PLAYFIELD
-;=====================
+;===============================================================================
+;   DRAW PLAYFIELD
+;===============================================================================
 draw_playfield
 	lda #3
 	sta PARAM2                      
@@ -959,9 +966,9 @@ add_score
 	rts
 
 
-;=======================================
+;===============================================================================
 ; DISPLAY SCORE
-;=======================================
+;===============================================================================
 DisplayScore   ;display the score label
 	lda #<SCORE_LABEL                
 	sta ZEROPAGE_POINTER_1          
@@ -1043,9 +1050,9 @@ DisplayBall
 	rts
 
 
-;=======================================
+;===============================================================================
 ; DRAW A ROW OF BRICKS
-;=======================================
+;===============================================================================
 ; PARAM2 = Y
 ; PARAM3 = Color
 ; Instead, PARAM3 == row text entry
@@ -1069,13 +1076,13 @@ draw_brick_row_loop
 	rts
 
 
-;========================================
+;===============================================================================
 ; DRAW A SINGLE BRICK
-;=======================================
+;===============================================================================
 ; PARAM1 = X
 ; PARAM2 = Y
 ; PARAM3 =  row text entry
-;=======================================
+;===============================================================================
 draw_brick
 	ldx PARAM3  ; which brick type     
 	lda BRICK_TEXT_LO,x  
@@ -1097,9 +1104,9 @@ erase_brick
 	rts
 
 
-;========================================
+;===============================================================================
 ; DISPLAY TITLE SCREEN
-;=======================================
+;===============================================================================
 display_title
 	jsr AtariMovePMOffScreen ; Make Players invisible by moving them off screen.
 
@@ -1164,9 +1171,9 @@ display_start_message
 	rts
 
 
-; -------------------------------------------------------------------------------------------
+;===============================================================================
 ; Test Button Press/Button Release.
-; -------------------------------------------------------------------------------------------
+;===============================================================================
 
 JoyButton
 	lda #1 ; checks for a previous button action
@@ -1199,13 +1206,13 @@ JoyButton
 	rts
 
 
-;-------------------------------------------------------------------------------------------
+;===============================================================================
 ; CLEAR SCREEN
-;-------------------------------------------------------------------------------------------
+;===============================================================================
 ; Clears the screen using a chosen character.
 ; A = Character to clear the screen with
 ; Y = Color to fill with
-; ------------------------------------------------------------------------------------------
+;===============================================================================
 
 ; This works as-is on Atari (without the color map) since 
 ; the custom display list lays out the screen memeory in 
@@ -1225,7 +1232,7 @@ ClearLoop
 	rts
 
 
-;============================================================================
+;===============================================================================
 ; Check for button press or auto_next timer.
 ;
 ; 0 means noting unusual happened.
@@ -1234,7 +1241,7 @@ ClearLoop
 ;
 ; 2 means button was released.  (mr roboto can be disabled).
 ;
-;============================================================================
+;===============================================================================
 check_event
 	jsr WaitFrame
 
@@ -1262,12 +1269,12 @@ no_input
 	rts
 
 
-;=============================================================================
+;===============================================================================
 ; pause_1_sec
 ;
 ; Wait for a second to give the player time to release the 
 ; button after switching screens.
-;=============================================================================
+;===============================================================================
 pause_1_second
 
 	jsr reset_timer ; and reinitialize the timer.
@@ -1279,11 +1286,11 @@ wait_a_second
 	rts
 	
 	
-;=============================================================================
+;===============================================================================
 ; reset_delay_timer
 ;
 ; Clear the 29 second wait timer.
-;=============================================================================
+;===============================================================================
 reset_delay_timer
 	lda #0 ; zero the event flag.
 	sta auto_next
@@ -1291,9 +1298,9 @@ reset_delay_timer
 	rts
 	
 	
-;=============================================================================
+;===============================================================================
 ; reset_timer
-;=============================================================================
+;===============================================================================
 reset_timer
 	lda #0	; reset real-time clock
 	sta RTCLOK+2;
@@ -1301,12 +1308,12 @@ reset_timer
 	rts
 	
 	
-;-------------------------------------------------------------------------------------------
+;===============================================================================
 ; VBL WAIT
-;-------------------------------------------------------------------------------------------
+;===============================================================================
 ; Wait for the raster to reach line $f8 - if it's aleady there, wait for
 ; the next screen blank. This prevents mistimings if the code runs too fast
-;-------------------------------------------------------------------------------------------
+;===============================================================================
 ; The Atari OS already maintains a clock that ticks every vertical 
 ; blank.  So, when the clock ticks the frame has started.
 ; Alternatively, (1) we could also do this like the C64 and monitor 
@@ -1319,7 +1326,7 @@ reset_timer
 ;
 ; And, every time this executes, run the sound service to play any
 ; audio updates currently in progress.
-
+;===============================================================================
 WaitFrame
 
 	lda RTCLOK60			; get frame/jiffy counter
@@ -1349,9 +1356,9 @@ exit_waitFrame
 	rts
 
 
-;-------------------------------------------------------------------------------------------
+;===============================================================================
 ; DISPLAY TEXT
-;-------------------------------------------------------------------------------------------
+;===============================================================================
 ; Displays a line of text.      '?' ($00) is the end of text character
 ;                               '/' ($2f) is the line break character
 ; ZEROPAGE_POINTER_1 = pointer to text data
@@ -1363,7 +1370,7 @@ exit_waitFrame
 ; NOTE : all text should be in lower case :  
 ; byte 'hello world?' or 
 ; byte 'hello world',$00
-;-------------------------------------------------------------------------------------------
+;===============================================================================
 
 ; We're going to copy the C64 memory layout on the Atari for the screen 
 ; graphics, so this part is largely very similar. Some changes are needed:
@@ -1380,6 +1387,7 @@ exit_waitFrame
 ;
 ; C64's $2F is a valid character in Atari internal format ("O"), so 
 ; we'll go with the Atari "standard" $9B for the End of Line.
+;===============================================================================
 
 DisplayText
 	ldx PARAM2
@@ -1426,20 +1434,20 @@ DisplayText
 	rts
 
 
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; DISPLAY BYTE DATA
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; Displays the data stored in a given byte on the screen as readable text in hex format (0-F)
 ; X = screen line - Yes, this is a little arse-backwards (X and Y) but I don't think
 ; Y = screen column   addressing modes allow me to swap them around
 ; A = byte to display
 ; MODIFIES : ZEROPAGE_POINTER_1, ZEROPAGE_POINTER_3, PARAM4
-;---------------------------------------------------------------------------------------------------
-
+;===============================================================================
 ; Largely the same on Atari.  
 ; BUT I notice the nybble to hex math is done twice.
 ; and it is writing low nybble, high nybble right to left on the screen
 ; Removing some redundancy with a lookup table.
+;===============================================================================
 
 DisplayByte
 	sta PARAM4                                      ; store the byte to display in PARAM4
@@ -1476,8 +1484,9 @@ NYBBLE_TO_HEX ; Values in Atari format
 	.SBYTE "0123456789ABCDEF"
 
 
-;====================================
+;===============================================================================
 ; SOUND EFFECTS
+;===============================================================================
 
 sound_bing  ; bing/buzz on drop ball
 	lda #$01 ; index to bing sound in sound tables.
@@ -1525,16 +1534,16 @@ clear_sound
 
 
 
-;============================================================================
+;===============================================================================
 ; ATARI-SPECIFIC FUNCTIONS
-;============================================================================
+;===============================================================================
 ; Various routines needed to set up the Atari environment to simulate 
 ; how everything is intended to execute on the C64 (with minimal changes).
-;============================================================================
+;===============================================================================
 
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; Atari Sound Service
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; The world's cheapest sequencer. Play one sound value from a table at each call.
 ; Assuming this is done synchronized to the frame it performs a sound change every 
 ; 16.6ms (approximately)
@@ -1545,7 +1554,7 @@ clear_sound
 ; If Control and Frequency are both non-zero, increment the index for the next call.
 ;
 ; No registers modified.
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 
 AtariSoundService
 
@@ -1572,15 +1581,15 @@ exitSoundService
 	safeRTS ; restore registers and CPU flags, then RTS
 
 
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; Atari Stop Screen
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; Stop all screen activity.
 ; Stop DLI activity.
 ; Kill Sprites (Player/Missile graphics)
 ;
 ; No registers modified.
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 
 AtariStopScreen
 
@@ -1609,15 +1618,15 @@ AtariStopScreen
 	safeRTS ; restore registers and CPU flags, then RTS
 
 
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; Atari Start Screen
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; Start Player/Missiles and the screen.
 ; P/M Horizontal positions were moved off screen earlier, so there 
 ; should be no glitches during startup.
 ;
 ; No registers modified.
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 
 AtariStartScreen
 
@@ -1668,9 +1677,9 @@ AtariStartScreen
 	safeRTS ; restore registers and CPU flags, then RTS
 
 
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; Atari Move P/M off screen
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; Reset all Player/Missile horizontal positions to 0. Setting HPOS to 0 guarantees 
 ; they are not visible even if the P/M graphics registers have junk in it no matter 
 ; what the width is for P/M graphics.
@@ -1679,7 +1688,7 @@ AtariStartScreen
 ; for Player 0 - force that one to be double width.
 ;
 ; No registers modified.
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 
 AtariMovePMOffScreen
 
@@ -1702,15 +1711,15 @@ AtariMovePMOffScreen
 	safeRTS ; restore registers and CPU flags, then RTS
 
 
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; Atari Clear P/M memory
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; Zero the Player/Missile image maps.
 ;
 ; This only clears memory used for Players 0 and 1.
 ;
 ; No registers modified.
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 
 AtariClearPMImage
 
@@ -1731,9 +1740,9 @@ AtariClearPMImage
 	safeRTS ; restore registers and CPU flags, then RTS
 
 
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; Atari Set Player 1 Image as the Ball
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; Initialize the image in the Player 1 bitmap.
 ; Set Starting X/Y position for Player1/Ball.
 ; 
@@ -1762,7 +1771,7 @@ AtariClearPMImage
 ; A == Sprite X postion
 ; Y == Sprite Y postion
 ; MODIFIES : 
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 
 AtariSetBallImage
 
@@ -1787,12 +1796,12 @@ AtariSetBallImage
 	safeRTS ; restore registers and CPU flags, then RTS
 
 
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; Atari Clear Player 1 Ball
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; Zero the bytes of the Player 1 bitmap at the Y position.
 ; Zero +2 to compensate for misadjusted Y at end of game.
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 
 AtariClearBallImage
 
@@ -1811,16 +1820,16 @@ AtariClearBallImage
 	safeRTS ; restore registers and CPU flags, then RTS
 
 
-;===================================================================================================
-;																		       PM RIPPLE UP 
-;===================================================================================================
+;===============================================================================
+;															       PM RIPPLE UP 
+;===============================================================================
 ; Move Player/ball image up one scan line from current position
 ; looping from top line to bottom/end.
 ;
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; An Atari-specific peculiarity.
 ; 
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 
 AtariPMRippleUp
 	
@@ -1849,16 +1858,16 @@ AtariPMRippleUp
 	safeRTS ; restore registers and CPU flags, then RTS
 	
 	
-;===================================================================================================
-;																		       PM RIPPLE DOWN 
-;===================================================================================================
+;===============================================================================
+;														       PM RIPPLE DOWN 
+;===============================================================================
 ; Move Player/ball image DOWN one scan line from current position
 ; looping from bottom/end byte to top.
 ;
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; An Atari-specific peculiarity.
 ; 
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 
 AtariPMRippleDown
 
@@ -1889,9 +1898,9 @@ AtariPMRippleDown
 	safeRTS ; restore registers and CPU flags, then RTS
 	
 	
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; Atari Set Player 0 Image as the Paddle
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 ; Copy the Paddle image into the Player 0 bitmap.
 ;
 ; On C64 the Sprite image is $ff,$f8 (or 13 pixels xxxxxxxxxxxxx) copied to four lines.
@@ -1906,7 +1915,7 @@ AtariPMRippleDown
 ; C64 set Sprite Y position to 144.  This mileage may vary on the Atari.  128 is better.
 ;
 ; No registers modified.
-;---------------------------------------------------------------------------------------------------
+;===============================================================================
 
 AtariSetPaddleImage
 
@@ -1928,391 +1937,34 @@ AtariSetPaddleImage
 
 
 
-;===============================
-; VARIABLES AND DATA
-;===============================
 
-ball_count
-	.byte $05
-
-brick_points 
-	.byte $00
-
-isBrick 
-	.byte $00
-
-brick_count 
-	.byte $28
-
-xchar   
-	.byte $00
-
-ychar   
-	.byte $00
-
-dir_x   
-	.byte $00
-
-dir_y   
-	.byte $01
-
-score 
-	.byte $00, $00
-; A thought... The digits to screen conversion would work 
-; out easier if the individual digits were kept in separate 
-; bytes and not BCD packed. 
-; Altering this would be a mod for beta version.
-
-mr_roboto
-	.byte $01  ; flag if the game play is in automatic mode.
-
-auto_next
-	.byte $00 ; flag when timer counted (29 sec). Used on the
-			; title and game over  and auto play screens. When auto_wait
-			; ticks it triggers automatic transition to the 
-			; next screen.
-
-last_event 
-	.byte $00 ; Save the value of last event in case it is needed fror retesting.
-
-game_over_flag
-	.byte $00 ; flag when game over occurs
-
-brick_row ;index for draw_brick_row
-	.byte $00
-
-BUTTON_PRESSED ; holds 1 when the button is held down
-	.byte $00
-
-BUTTON_RELEASED ; holds 1 when a single press is made (button released)
-	.byte $00
-
-SCORE_LABEL
-;       .byte 'score?'
-	.sbyte "score"
-	.byte $FF
-
-BALL_LABEL
-;       .byte 'ball?'
-	.sbyte "ball"
-	.byte $FF
-
-CHAR_COORD_LABEL
-;       .byte 'x:   y:?'
-	.sbyte "x:   y:   "
-	.byte $FF
-
-; Box characters are interesting.
-; It makes a box that is 3 
-; characters wide x 1 character
-; tall, i.e:
-; ----------
-; |**|**|**|
-; |**|**|**|
-; ----------
-; but instead of just using 
-; 3 characters next to each other
-; it uses six control characters 
-; spread over 4 characters x 2 lines
-; to make the same sized box.
-; -------------
-; |..|..|..|..|
-; |.*|**|**|*.|
-; -------------
-; |.*|**|**|*.|
-; |..|..|..|..|
-; -------------
-; ??? Theorize this is done to facilitate
-; collision detection to make sure the 
-; sprite is deep overlapping a character
-; when collision is triggered. 
-
-; 108 == $6C box L/R corner 
-; 98 ==  $62 box bottom 
-; 123 == $7B box L/L corner 
-
-; 124 == $7C box u/R corner
-; 226 == $E0 box top
-; 126 == $7E box U/L
-
-; BRICK_TEXT
-;       .byte 108,98,98,123,47,124,226,226,126,0
-
-; Therefore... Since we don't have color cells
-; we need color-specific strings of characters.
-; The custom character set has these following
-; lists of characters for each color wedged and 
-; crammed into the 128 available characters. 
-
-; In retrospect, this could be done with one 
-; set of characters and a display list interrupt 
-; changes colors at different lines on the screen...
-; That is TODO for another day.
-
-; BRICK_TEXT COLPF0
-BRICK_TEXT_0
-	.byte $1c,$1d,$1d,$1e
-	.byte $9B
-	.byte $1f,$3b,$3b,$3c
-	.byte $FF
-  
-; BRICK_TEXT COLPF1
-BRICK_TEXT_1
-	.byte $3d,$3e,$3e,$3f
-	.byte $9B
-	.byte $5b,$5c,$5c,$5d
-	.byte $FF
-  
-; BRICK_TEXT COLPF2
-BRICK_TEXT_2
-	.byte $5e,$5f,$5f,$7b
-	.byte $9B
-	.byte $7c,$7d,$7d,$7e
-	.byte $FF
-
-; BRICK_TEXT COLPF3
-BRICK_TEXT_3
-	.byte $de,$df,$df,$fb
-	.byte $9B
-	.byte $fc,$fd,$fd,$fe
-	.byte $FF
-
-BRICK_TEXT_LO
-; An atasm gymnastic to build the table at assembly time....
-	entry .= 0
-	.rept 4 ; repeat 4 times
-	.byte <[BRICK_TEXT_0+[entry*10]]
-	entry .= entry+1 ; next entry in table.
-	.endr
-
-BRICK_TEXT_HI
-; An atasm gymnastic to build the table at assembly time....
-	entry .= 0
-	.rept 4 ; repeat 4 times
-	.byte >[BRICK_TEXT_0+[entry*10]]
-	entry .= entry+1 ; next entry in table.
-	.endr
-
-ERASE_BRICK_TEXT
-;       .byte 32,32,32,32,47,32,32,32,32,0
-	.sbyte "    "
-	.byte $9B
-	.sbyte "    "
-	.byte $FF
-
-
-GAME_OVER_TEXT
-;       .byte ' g a m e   o v e r ?'
-	.sbyte " G A M E   O V E R "
-	.byte $FF
-
-START_TEXT
-;       .byte 'press fire to play?'
-	.sbyte +$80,"press FIRE to play"
-	.byte $FF
-
-
-; Atari big block for title screen is defined as 
-; $20 COLPF0 -- Red     $01 = half block
-; $40 COLPF1 -- Orange  $02 = half block
-; $60 COLPF2 -- Green   $03 = half block
-; $E0 COLPF3 -- Yellow  $83 = half block
-
-TITLE1
-	.byte $20,$20,$20,$00,$00,$20,$20,$20,$00,$00,$20,$20,$20,$20,$00,$00,$20,$20,$00,$00,$20,$00,$00,$20,$00,$20,$20,$20,$20,$00,$20,$00,$00,$20,$01,$20,$20,$20,$9B
-	.byte $20,$00,$00,$20,$00,$20,$00,$00,$20,$00,$20,$00,$00,$00,$00,$00,$20,$00,$20,$00,$20,$00,$00,$20,$00,$20,$00,$00,$20,$00,$20,$00,$00,$20,$00,$00,$20,$9B
-	.byte $FF
-
-TITLE2        
-	.byte $40,$00,$00,$40,$00,$40,$00,$00,$40,$00,$40,$00,$00,$00,$00,$40,$00,$00,$40,$00,$40,$00,$40,$00,$00,$40,$00,$00,$40,$00,$40,$00,$00,$40,$00,$00,$40,$9B
-	.byte $40,$40,$40,$00,$00,$40,$40,$40,$00,$00,$40,$40,$40,$00,$00,$40,$40,$40,$40,$00,$40,$40,$40,$00,$00,$40,$00,$00,$40,$00,$40,$00,$00,$40,$00,$00,$40,$9B
-	.byte $FF
-
-TITLE3        
-	.byte $60,$00,$00,$60,$00,$60,$00,$00,$60,$00,$60,$00,$00,$00,$00,$60,$00,$00,$60,$00,$60,$00,$00,$60,$00,$60,$00,$00,$60,$00,$60,$00,$00,$60,$00,$00,$60,$9B
-	.byte $60,$60,$00,$60,$00,$60,$60,$00,$60,$00,$60,$60,$00,$00,$00,$60,$60,$00,$60,$00,$60,$60,$00,$60,$00,$60,$60,$00,$60,$00,$60,$60,$00,$60,$00,$00,$60,$60,$9B
-	.byte $FF
-
-TITLE4
-	.byte $E0,$E0,$00,$E0,$00,$E0,$E0,$00,$E0,$00,$E0,$E0,$00,$00,$00,$E0,$E0,$00,$E0,$00,$E0,$E0,$00,$E0,$00,$E0,$E0,$00,$E0,$00,$E0,$E0,$00,$E0,$00,$00,$E0,$E0,$9B
-	.byte $E0,$E0,$E0,$00,$00,$E0,$E0,$00,$E0,$00,$E0,$E0,$E0,$E0,$00,$E0,$E0,$00,$E0,$00,$E0,$E0,$00,$E0,$00,$E0,$E0,$E0,$E0,$00,$E0,$E0,$E0,$E0,$00,$00,$E0,$E0
-	.byte $FF
-
-CREDIT1_TEXT 
-	.sbyte "C64 ORIGINAL BY DARREN DU VALL"
-	.byte $9B
-	.sbyte "AKA SAUSAGE-TOES"
-	.byte $FF
-
-CREDIT2_TEXT 
-	.sbyte "atari 8-bit port by ken jennings"
-	.byte $FF
-
-; Atari needs some "soft" location for Player/missile X and Y positions.
-; GTIA Horizontal position registers cannot be incremented directly 
-; as it is only the horizontal position on write, and a collision 
-; register on read.
-
-PADDLE_PLAYER_X .byte 84
-
-BALL_PLAYER_X .byte 90
-BALL_PLAYER_Y .byte 128
-
-; On C64 the Sprite image is:
-; $38 ..xxx...
-; $7c .xxxxx..
-; $fe xxxxxxx. 
-; $fe xxxxxxx.
-; $fe xxxxxxx.
-; $7c .xxxxx..
-; $38 ..xxx...
+;===============================================================================
+;   DISPLAY RELATED MEMORY
+;===============================================================================
+; This is loaded last, because it defines several large blocks and
+; repeatedly forces alignment to page, and K boundaries.
 ;
-; On Atari the normal Player pixel width is 1 color clock per bit, so 
-; the image needs to be compressed to cover a similar, approximate area 
-; in color clocks:
-; $20 ..x.....
-; $70 .xxx....
-; $f8 xxxxx... 
-; $f8 xxxxx...
-; $f8 xxxxx...
-; $70 .xxx....
-; $20 ..x.....
-
-BALL_PLAYER_IMAGE
-	.byte $20,$70,$f8,$f8,$f8,$70,$20
-
-SOUND_INDEX
-	.byte $00
-
-SOUND_AUDC_TABLE ; AUDC -- Waveform, and Volume
-; index 0 is 0 sound
-	.byte $00
-; index 1 is bing/buzz on drop ball.  A 2ms, D 168ms, S 0, R 168 ms
-	.byte $Ad,$AC,$AB,$AA,$A9,$A8,$A7,$A6,$A5,$A3,$A2,$A0,$00
-; index $0e/14 is bounce brick.  A 2ms, D 168ms, S 0, R 168 ms
-	.byte $Ad,$AC,$AB,$AA,$A9,$A8,$A7,$A6,$A5,$A3,$A2,$A0,$00
-; index $1b/27 is bounce_wall.  A 2ms, D 168ms, S 0, R 168 ms
-	.byte $Ad,$AC,$AB,$AA,$A9,$A8,$A7,$A6,$A5,$A3,$A2,$A0,$00
-; index $28/40 is bounce_paddle.  A 2ms, D 168ms, S 0, R 168 ms
-	.byte $Ad,$AC,$AB,$AA,$A9,$A8,$A7,$A6,$A5,$A3,$A2,$A0,$00
-		
-SOUND_AUDF_TABLE ; AUDF -- Frequency -- a little quirky tone shaping
-; index 0 is 0 sound
-	.byte $00
-; index 1 is bing/buzz on drop ball.  A 2ms, D 168ms, S 0, R 168 ms
-	.byte $30,$38,$40,$48,$50,$58,$60,$68,$70,$80,$90,$a0,$00
-; index $0E/14 is bounce brick.  A 2ms, D 168ms, S 0, R 168 ms
-	.byte $20,$20,$20,$20,$20,$1f,$1f,$1f,$1e,$1e,$1e,$1d,$00
-; index $1b/27 is bounce_wall.  A 2ms, D 168ms, S 0, R 168 ms
-	.byte $18,$18,$18,$18,$18,$17,$17,$17,$16,$16,$16,$15,$00
-; index $28/40 is bounce_paddle.  A 2ms, D 168ms, S 0, R 168 ms
-	.byte $10,$10,$10,$10,$10,$0f,$0f,$0f,$0e,$0e,$0e,$0d,$00
-	
-;---------------------------------------------------------------------------------------------------
-; Screen Line Offset Tables
-; Query a line with lda (POINTER TO TABLE),x (where x holds the line number)
-; and it will return the screen address for that line.
-												  
-SCREEN_LINE_OFFSET_TABLE_LO        
-; An atasm gymnastic to build the table at assembly time....
-	entry .= 0
-	.rept 25 ; repeat 25 times
-	.byte <[SCREEN_MEM+[entry*40]]
-	entry .= entry+1 ; next entry in table.
-	.endr
+	.include "display.asm"
 
 
-SCREEN_LINE_OFFSET_TABLE_HI
-; An atasm gymnastic to build the table at assembly time....
-	entry .= 0
-	.rept 25 ; repeat 25 times
-	.byte >[SCREEN_MEM+[entry*40]]
-	entry .= entry+1 ; next entry in table.
-	.endr
-
-; --------------------------------------------------------------------
-; Align to the next nearest 2K boundary for single-line 
-; resolution Player/Missiles
-	*=[*&$F800]+$0800
-
-PLAYER_MISSILE_BASE  ; Player/missile memory goes here. 
-
-	*=*+$0800  ; And reserve 2K.
-
-; --------------------------------------------------------------------
-; Thanks to the P/M alignment we know the current program 
-; address is already aligned to an acceptable boundary, 
-; so we don't need to force alignment to a 1K border.  
-; But if we did it would be done as:
-;	*=[*&$FC00]+$0400 
-
-CUSTOM_CSET ; Multi-color character set goes here
-
-	.incbin "breakout.cset" ; Loads 1K of data
-
-; Loading data uses the space, so no need to force 
-; the program address for the Display list.
-
-; --------------------------------------------------------------------
-; Atari uses a Display List "program" to specify the graphics screen.
-; Contrary to popular myth the Atari display is not limited to only 
-; 192 scan lines.
-;
-; The Display list below results in the same 200 scan lines of 
-; character text as the C64/VIC-II. (and it need not stop at 200.)
-; This creates a full screen of multi-color text lines.  The program 
-; will also use a custom charaacter set to simulate the four color 
-; cell values used by the C64 version.
-;
-; The character set loaded previously aligned the address counter
-; to a 1K boundary, so we don;t need to force alignment here to
-; prevent the Display List from crossing a 1K boundary.
-; But if we did it would be done as:
-;	*=[*&$FC00]+$0400 
-
-DISPLAY_LIST
-;  20 blank scan lines for spacing...
-	.byte DL_BLANK_8,DL_BLANK_8,DL_BLANK_4
-; 25 lines of multi-color text
-; First line starts the memory scan
-	.byte DL_TEXT_4|DL_LMS
-	.word SCREEN_MEM
-; and the remaining 24 lines...
-	.byte DL_TEXT_4,DL_TEXT_4,DL_TEXT_4,DL_TEXT_4
-	.byte DL_TEXT_4,DL_TEXT_4,DL_TEXT_4,DL_TEXT_4
-	.byte DL_TEXT_4,DL_TEXT_4,DL_TEXT_4,DL_TEXT_4
-	.byte DL_TEXT_4,DL_TEXT_4,DL_TEXT_4,DL_TEXT_4
-	.byte DL_TEXT_4,DL_TEXT_4,DL_TEXT_4,DL_TEXT_4
-	.byte DL_TEXT_4,DL_TEXT_4,DL_TEXT_4,DL_TEXT_4
-; End with the jump to vertical blank
-	.byte DL_JUMP_VB
-	.word DISPLAY_LIST
-
-; Future speculation:
-;
-; A more clever-er version could eliminate unused mode lines
-; replacing them with blank line instructions to save memory.
-;
-; Another flavor of clever-er-ness would include a few mode 2
-; text lines with DLIs to change fonts and colors to display
-; cleaner text for the messages and the score.
-;
-; And another possible clever version could exploit the fact 
-; only one color cell value is used per bricks on a horizontal 
-; line -- this could also be done with the same font character 
-; using only one color register and DLIs to change the 
-; color register color for each line. Additionally, this could 
-; simplify the collision detection by having only one possible 
-; character value for testing.
-
-; --------------------------------------------------------------------
+;===============================================================================
+;   PROGRAM_INIT_ADDRESS
+;===============================================================================
+; Atari uses a structured executable file format that 
+; loads data to specific memory and provides an automatic 
+; run address.  There is no need to interact with BASIC 
+; the way the C64 does startup.
+;===============================================================================
 ; Store the program start location in the Atari DOS RUN Address.
 ; When DOS is done loading the executable it will automatically
 ; jump to the address placed in the DOS_RUN_ADDR.
+;===============================================================================
 
 	*=DOS_RUN_ADDR
 	.word PRG_START
 
-; --------------------------------------------------------------------
+;===============================================================================
+
 	.end ; finito
  
+;===============================================================================
