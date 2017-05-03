@@ -1128,6 +1128,19 @@ End_Ball_Counter
 	lda ENABLE_SCORE 
 	beq End_Score_Display
 
+	; Always spin the colors...
+	
+    ldx DISPLAYED_BALLS_SCORE_COLOR_INDEX ; Get index.
+	inx
+	cpx #16                               ; Limit is 0 to 15
+	bne Update_BALL_SCORE_Index           
+	ldx #0
+	
+Update_BALL_SCORE_Index
+	stx DISPLAYED_BALLS_SCORE_COLOR_INDEX
+	
+	; Actual score display updates...
+	
 	lda REAL_SCORE_DIGITS ; is there game score zero?
 	beq End_Score_Display ; Yes. So nothing to count/display.
 
@@ -1163,7 +1176,7 @@ Increment_Score
 	adc #1                    ; Add 1 to displayed score digit
 	cmp #10                   ; Did single-digit 9 increment into double-digit 10?
 	bne Save_And_Do_Display   ; No. So, display what is changed.
-	lda #0                    ; Yes.  Reset this digit to 0.
+	lda #0                    ; Yes.  Reset this digit to 0. 
 	sta DISPLAYED_SCORE,x     ; Save the update.
 	inx                       ; Move to next digit position.
 	lda DISPLAYED_SCORE,x     ; Get next digit of displayed score.
