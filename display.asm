@@ -36,82 +36,6 @@
 
 
 ;===============================================================================
-; VARIOUS CONSTANTS AND LIMITS
-;===============================================================================
-
-; Let's define some useful offsets and sizes for the bricks. 
-; Could become useful somewhere else.
-;
-BRICK_LEFT_OFFSET =   3  ; offset from normal playfield left edge to left edge of brick 
-BRICK_RIGHT_OFFSET =  12 ; offset from normal playfield left edge to the right edge of first brick
-BRICK_PIXEL_WIDTH =   10 ; Actual drawn pixels in brick.
-BRICK_WIDTH =         11 ; including the trailing blank space separating bricks 
-
-BRICK_TOP_OFFSET =     78  ; First scan line of top line of bricks. just a guess right now
-BRICK_TOP_END_OFFSET = 82  ; Last scan line of the top line of bricks.
-BRICK_BOTTOM_OFFSET =  133 ; Last scan line of bottom line of bricks.
-BRICK_LINE_HEIGHT =   5    ; Actual drawn graphics scanlines.
-BRICK_HEIGHT =        7    ; including the following blank lines (used when multiplying for position) 
-
-
-; Playfield MIN/MAX travel areas relative to the ball.
-;
-MIN_PIXEL_X = PLAYFIELD_LEFT_EDGE_NORMAL+BRICK_LEFT_OFFSET
-MAX_PIXEL_X = MIN_PIXEL_X+152 ; Actual last color clock of last brick.
-MIN_BALL_X =  MIN_PIXEL_X ; because PM/left edge is same
-MAX_BALL_X =  MAX_PIXEL_X-1 ; because ball is 2 color clocks wide
-
-MIN_PIXEL_Y = 53 ; Top edge of the playfield.  just a guess right now.
-MAX_PIXEL_Y = 230 ; bottom edge after paddle.  lose ball here.
-
-; Ball travel when bouncing from walls and bricks will simply negate 
-; the current horizontal or vertical direction.
-; Ball travel when bouncing off the paddle will require lookup tables
-; to manage angle (and speed changes).
-
-
-; Playfield MIN/MAX travel areas relative to the Paddle.
-;
-; Paddle travel is only horizontal. But the conversion from paddle 
-; value (potentiometer) to paddle Player on screen will have different
-; tables based on wide paddle and narrow paddle sizes.
-; The paddle also is allowed to travel beyond the left and right sides
-; of the playfield far enough that only an edge of the paddle is 
-; visible for collision on the playfield.
-; The size of the paddle varied the coordinates for this.
-;
-; Paddle limits:
-; O = Offscreen/not playfield
-; X = ignored playfield 
-; P = Playfield 
-; T = Paddle Pixels
-;
-; (Normal  Left)     (Normal Right)
-; OOOxxxPP           PPxxxxOOO 
-; TTTTTTTT           TTTTTTTT
-; MIN = Playfield left edge normal - 3
-; MAX = Playfield right edge - 5
-;
-; (Small  Left)     (Small Right)
-; OOOxxxPP           PPxxxxOOO 
-;    TTTTT           TTTTT
-; MIN = Playfield left edge normal
-; MAX = Playfield right edge - 5
-;
-PADDLE_NORMAL_MIN_X = PLAYFIELD_LEFT_EDGE_NORMAL-3
-PADDLE_NORMAL_MAX_X = PLAYFIELD_RIGHT_EDGE_NORMAL-5
-
-PADDLE_SMALL_MIN_X = PLAYFIELD_LEFT_EDGE_NORMAL
-PADDLE_SMALL_MAX_X = PLAYFIELD_RIGHT_EDGE_NORMAL-5
-
-; FYI:
-; PLAYFIELD_LEFT_EDGE_NORMAL  = $30 ; First/left-most color clock horizontal position
-; PLAYFIELD_RIGHT_EDGE_NORMAL = $CF ; Last/right-most color clock horizontal position
-
-
-
-
-;===============================================================================
 ; PLAYER/MISSILE BITMAP MEMORY
 ;===============================================================================
 	*=$8000
@@ -129,9 +53,7 @@ PMADR_BASE3 = PLAYER_MISSILE_BASE+$700
 	*=[*&$F800]+$0800
 
 ; Custom character set for Credit text window
-CHARACTER_SET_00
-	.incbin "mode3.cset"
-; Mode 3 Custom character set.
+; Mode 3 Custom character set. 1024 bytes
 ; Alphas, numbers, basic punctuation.
 ; - ( ) . , : ; and /
 ; Also, infinity and Cross.
@@ -140,11 +62,12 @@ CHARACTER_SET_00
 ; Character set is 1K of data, so alignment does 
 ; not need to be forced here.
 ; ( *= $8C00 )
+CHARACTER_SET_00
+	.incbin "mode3.cset"
+
 
 ; Custom character set for Title and Score
-CHARACTER_SET_01
-	.incbin "breakout.cset"
-; Mode 6 custom character set
+; Mode 6 custom character set.  512 bytes.
 ; 2x chars for 0 to 9. 1-10 (top) and 11-20 (bottom)
 ; 2x chars for title text:  
 ; B R E A K O U T $15-$24 (top/bottom interleaved)
@@ -153,6 +76,9 @@ CHARACTER_SET_01
 ; Character set is 1/2K of data, so
 ; alignment does not need to be forced here.
 ; ( *= $8E00 )
+CHARACTER_SET_01
+	.incbin "breakout.cset"
+
 
 
 ;===============================================================================
@@ -165,44 +91,44 @@ CHARACTER_SET_01
 ; scrolling will only need to update the 
 ; LMS low byte for every line
 ;
-BRICK_LINE0
-	.ds $0040 ; 64 bytes for left/right scroll. Relative +$0000
+BRICK_LINE0 
+	.dc $0040 $00 ; 64 bytes for left/right scroll. Relative +$0000
 BRICK_LINE1
-	.ds $0040 ; 64 bytes for left/right scroll. Relative +$0040
+	.dc $0040 $00 ; 64 bytes for left/right scroll. Relative +$0040
 BRICK_LINE2
-	.ds $0040 ; 64 bytes for left/right scroll. Relative +$0080
+	.dc $0040 $00 ; 64 bytes for left/right scroll. Relative +$0080
 BRICK_LINE3
-	.ds $0040 ; 64 bytes for left/right scroll. Relative +$00C0
+	.dc $0040 $00 ; 64 bytes for left/right scroll. Relative +$00C0
 BRICK_LINE4
-	.ds $0040 ; 64 bytes for left/right scroll. Relative +$0100
+	.dc $0040 $00 ; 64 bytes for left/right scroll. Relative +$0100
 BRICK_LINE5
-	.ds $0040 ; 64 bytes for left/right scroll. Relative +$0140
+	.dc $0040 $00 ; 64 bytes for left/right scroll. Relative +$0140
 BRICK_LINE6
-	.ds $0040 ; 64 bytes for left/right scroll. Relative +$0180
+	.dc $0040 $00 ; 64 bytes for left/right scroll. Relative +$0180
 BRICK_LINE7
-	.ds $0040 ; 64 bytes for left/right scroll. Relative +$01C0
+	.dc $0040 $00 ; 64 bytes for left/right scroll. Relative +$01C0
 
 ; ( *= $8E00 to $8E7F )
 ; Memory for scrolling title
 ;
 TITLE_LINE0
-	.ds $0040 ; 64 bytes for left/right scroll. Relative +$0200
+	.dc $0040 $00 ; 64 bytes for left/right scroll. Relative +$0200
 TITLE_LINE1
-	.ds $0040 ; 64 bytes for left/right scroll. Relative +$0240
+	.dc $0040 $00 ; 64 bytes for left/right scroll. Relative +$0240
 
 ; ( *= $8E80 to $8EFF )
 ; Memory for scrolling Score 
 ;
 SCORE_LINE0
-	.ds $0040 ; 64 bytes for left/right scroll. Relative +$0280
+	.dc $0040 $00 ; 64 bytes for left/right scroll. Relative +$0280
 SCORE_LINE1
-	.ds $0040 ; 64 bytes for left/right scroll. Relative +$02C0
+	.dc $0040 $00 ; 64 bytes for left/right scroll. Relative +$02C0
 
 ; ( *= $8F00 to $8F3F )
 ; Master copies (source copied to working screen)
 ;
 EMPTY_LINE ; 64 bytes of 0.
-	.dc $0040 $00 ; 64 bytes of 0.              Relative +$0300
+	.dc $0040 $00 ; 64 bytes of 0.                  Relative +$0300
 
 
 ; ( *= $8F40 to $8F53 ) 20 bytes
@@ -842,102 +768,155 @@ DISPLAY_LIST_SCORE_LMS
 ; mode 6 title text:  B R E A K O U T
 
 ; Common lines for center scroll
-CENTER_SCROLL_00 .sbyte "                                " 	
-CENTER_SCROLL_01 .sbyte "          - - + - -             " 
+CENTER_SCROLL_00 
+	.sbyte "                                " 	
+CENTER_SCROLL_01 
+	.sbyte "          - - + - -             " 
 
 ; SubTitle on Logo Screen.
-SUBTITLE_01	.sbyte "        B R E A K O U T         " ; 
-SUBTITLE_02	.sbyte "           Gratuitous           " 
-SUBTITLE_03	.sbyte "           Eye-Candy            "
-SUBTITLE_04	.sbyte "            Edition             " ; 
+SUBTITLE_01	
+	.sbyte "        B R E A K O U T         " ; 
+SUBTITLE_02	
+	.sbyte "           Gratuitous           " 
+SUBTITLE_03	
+	.sbyte "           Eye-Candy            "
+SUBTITLE_04	
+	.sbyte "            Edition             " ; 
 
 ; Prompts for the center scrolling window.
 PROMPT_LINES
 	;                                         ; repeat common 00 for lines to empty the scroll window
-PROMPT_01 .sbyte "  Press   F I R E   to continue " ; 1
+PROMPT_01 
+	.sbyte "  Press   F I R E   to continue " ; 1
 	;                                         ; repeat common 00 for lines to empty the scroll window
 
 ; Credits for center scrolling window.  
 CREDIT_LINES
 	;                                         ; repeat common 00 for lines to empty the scroll window
-CREDIT_01 .sbyte "Breakout Arcade                 " ; 1
-CREDIT_02 .sbyte "-- ( 1976 )                     " ; 2
+CREDIT_01 
+	.sbyte "Breakout Arcade                 " ; 1
+CREDIT_02 
+	.sbyte "-- ( 1976 )                     " ; 2
 	;                                         ; repeat common 00
-CREDIT_03 .sbyte "Conceptualized by Nolan Bushnell" ; 3
-CREDIT_04 .sbyte "and Steve Bristow.              " ; 4
-CREDIT_05 .sbyte "Built by Steve Wozniak.         " ; 5
-CREDIT_06 .sbyte "https://en.wikipedia.org/...    " ; 6
-CREDIT_07 .sbyte "...wiki/Breakout_(video_game)   " ; 7
+CREDIT_03 
+	.sbyte "Conceptualized by Nolan Bushnell" ; 3
+CREDIT_04 
+	.sbyte "and Steve Bristow.              " ; 4
+CREDIT_05 
+	.sbyte "Built by Steve Wozniak.         " ; 5
+CREDIT_06 
+	.sbyte "https://en.wikipedia.org/...    " ; 6
+CREDIT_07 
+	.sbyte "...wiki/Breakout_(video_game)   " ; 7
 	;                                         ; repeat common 00
 	;            - - + - -                    ; repeat common 01
 	;                                         ; repeat common 00
-CREDIT_08 .sbyte "C64 Breakout clone              " ; 8 C64 Breakout clone
-CREDIT_09 .sbyte "-- ( 2016 )                     " ; 9
+CREDIT_08 
+	.sbyte "C64 Breakout clone              " ; 8 C64 Breakout clone
+CREDIT_09 
+	.sbyte "-- ( 2016 )                     " ; 9
 	;                                         ; repeat common 00
-CREDIT_10 .sbyte "Written by Darren Du Vall       " ; 10
-CREDIT_11 .sbyte "aka Sausage-Toes                " ; 11
-CREDIT_12 .sbyte "Source at:                      " ; 12 source at
-CREDIT_13 .sbyte "Github: https://github.com/     " ; 13 github
-CREDIT_14 .sbyte "Sausage-Toes/C64_Breakout       " ; 14
+CREDIT_10 
+	.sbyte "Written by Darren Du Vall       " ; 10
+CREDIT_11 
+	.sbyte "aka Sausage-Toes                " ; 11
+CREDIT_12 
+	.sbyte "Source at:                      " ; 12 source at
+CREDIT_13 
+	.sbyte "Github: https://github.com/     " ; 13 github
+CREDIT_14 
+	.sbyte "Sausage-Toes/C64_Breakout       " ; 14
 	;                                         ; repeat common 00
 	;            - - + - -                    ; repeat common 01
 	;                                         ; repeat common 00
 	;       .sbyte "C64 Breakout clone              " ; repeat 8 C64 Breakout clone
-CREDIT_15 .sbyte "ported to Atari 8-bit           " ; 15
-CREDIT_16 .sbyte -- ( 2017 )                      " ; 16 -- 2017
+CREDIT_15 
+	.sbyte "ported to Atari 8-bit           " ; 15
+CREDIT_16 
+	.sbyte -- ( 2017 )                      " ; 16 -- 2017
 	;                                         ; repeat common 00
-CREDIT_17 .sbyte "Atari-fied by Ken Jennings      " ; 17
-CREDIT_18 .sbyte "Built for Atari using eclipse,  " ; 18 built 1
-CREDIT_19 .sbyte "wudsn, and atasm on linux.      " ; 19 built 2
-	;     .sbyte "Source at:                      " ; repeat 12 source at
-	;     .sbyte "Github: https://github.com/     " ; repeat 13 github
-CREDIT_20 .sbyte "kenjennings/C64-Breakout-...    " ; 20
-CREDIT_21 .sbyte "...for-Atari                    " ; 21 for atari
-CREDIT_22 .sbyte "Google Drive:                   " ; 22 google drive 1
-CREDIT_23 .sbyte "https://drive.google.com/...    " ; 23 google drive 2
-CREDIT_24 .sbyte "...drive/folders/...            " ; 24 google drive 3
-CREDIT_25 .sbyte "...0B2m-YU97EHFESGVkTXp3WUdKUGM " ; 25
-	;                                         ; repeat common 00
-	;            - - + - -                    ; repeat common 01
-	;                                         ; repeat common 00
-CREDIT_26 .sbyte "Breakout:                       " ; 26
-CREDIT_27 .sbyte "Gratuitous Eye Candy Edition    " ; 27
-	;     .sbyte "-- ( 2017 )                     " ; repeat 16 -- 2017
-	;                                         ; repeat common 00
-CREDIT_28 .sbyte "Written by Ken Jennings         " ; 28
-	;     .sbyte "Built for Atari using eclipse,  " ; repeat 18 built 1
-	;     .sbyte "wudsn, and atasm on linux.      " ; repeat 19 built 1
-	;     .sbyte "Source at:                      " ; repeat 12 source at
-	;     .sbyte "Github: https://github.com/     " ; repeat 13 github
-CREDIT_29 .sbyte "kenjennings/Breakout-GECE-...   " ; 29
-	;     .sbyte "...for-Atari                    " ; repeat 21 for Atari
-	;     .sbyte "Google Drive:                   " ; repeat 22 google drive 1
-	;     .sbyte "https://drive.google.com/...    " ; repeat 23 google drive 2
-	;     .sbyte "...drive/folders/...            " ; repeat 24 google drive 3
-CREDIT_30 .sbyte "...                             " ; 30
+CREDIT_17 
+	.sbyte "Atari-fied by Ken Jennings      " ; 17
+CREDIT_18 
+	.sbyte "Built for Atari using eclipse,  " ; 18 built 1
+CREDIT_19 
+	.sbyte "wudsn, and atasm on linux.      " ; 19 built 2
+	;.sbyte "Source at:                      " ; repeat 12 source at
+	;.sbyte "Github: https://github.com/     " ; repeat 13 github
+CREDIT_20 
+	.sbyte "kenjennings/C64-Breakout-...    " ; 20
+CREDIT_21 
+	.sbyte "...for-Atari                    " ; 21 for atari
+CREDIT_22 
+	.sbyte "Google Drive:                   " ; 22 google drive 1
+CREDIT_23 
+	.sbyte "https://drive.google.com/...    " ; 23 google drive 2
+CREDIT_24 
+	.sbyte "...drive/folders/...            " ; 24 google drive 3
+CREDIT_25 
+	.sbyte "...0B2m-YU97EHFESGVkTXp3WUdKUGM " ; 25
 	;                                         ; repeat common 00
 	;            - - + - -                    ; repeat common 01
 	;                                         ; repeat common 00
-CREDIT_31 .sbyte "Ken Jennings                    " ; 31
-CREDIT_32 .sbyte "-- ( 1966 )                     " ; 32
+CREDIT_26 
+	.sbyte "Breakout:                       " ; 26
+CREDIT_27 
+	.sbyte "Gratuitous Eye Candy Edition    " ; 27
+	;.sbyte "-- ( 2017 )                     " ; repeat 16 -- 2017
 	;                                         ; repeat common 00
-CREDIT_33 .sbyte "Produced by Mr and Mrs Jennings " ; 33
+CREDIT_28 
+	.sbyte "Written by Ken Jennings         " ; 28
+	;.sbyte "Built for Atari using eclipse,  " ; repeat 18 built 1
+	;.sbyte "wudsn, and atasm on linux.      " ; repeat 19 built 1
+	;.sbyte "Source at:                      " ; repeat 12 source at
+	;.sbyte "Github: https://github.com/     " ; repeat 13 github
+CREDIT_29 
+	.sbyte "kenjennings/Breakout-GECE-...   " ; 29
+	;.sbyte "...for-Atari                    " ; repeat 21 for Atari
+	;.sbyte "Google Drive:                   " ; repeat 22 google drive 1
+	;.sbyte "https://drive.google.com/...    " ; repeat 23 google drive 2
+	;.sbyte "...drive/folders/...            " ; repeat 24 google drive 3
+CREDIT_30 
+	.sbyte "...                             " ; 30
 	;                                         ; repeat common 00
-CREDIT_34 .sbyte "               ;-)              " ; 34	
+	;            - - + - -                    ; repeat common 01
 	;                                         ; repeat common 00
-CREDIT_35 .sbyte "in an amazing and wonderful     " ; 35
-CREDIT_36 .sbyte "universe made by an infinite God" ; 36
-CREDIT_37 .sbyte "-- ( infinity )                       " ; 37
+CREDIT_31 
+	.sbyte "Ken Jennings                    " ; 31
+CREDIT_32 
+	.sbyte "-- ( 1966 )                     " ; 32
 	;                                         ; repeat common 00
-CREDIT_38 .sbyte "   The Son is the radiance of   " ; 38
-CREDIT_39 .sbyte "    GOD's glory and the exact   " ; 39
-CREDIT_40 .sbyte "  representation of his being,  " ; 40 
-CREDIT_41 .sbyte "  sustaining all things by his  " ; 41
-CREDIT_42 .sbyte "  powerful word. After he had   " ; 42
-CREDIT_43 .sbyte " provided purification for sins," ; 43
-CREDIT_44 .sbyte "  he sat down at the right hand " ; 44
-CREDIT_45 .sbyte "    of the Majesty in heaven.   " ; 45
-CREDIT_46 .sbyte "-- Hebrews 1:3                  " ; 46
+CREDIT_33 
+	.sbyte "Produced by Mr and Mrs Jennings " ; 33
+	;                                         ; repeat common 00
+CREDIT_34 
+	.sbyte "               ;-)              " ; 34	
+	;                                         ; repeat common 00
+CREDIT_35 
+	.sbyte "in an amazing and wonderful     " ; 35
+CREDIT_36 
+	.sbyte "universe made by an infinite God" ; 36
+CREDIT_37 
+	.sbyte "-- ( infinity )                       " ; 37
+	;                                         ; repeat common 00
+CREDIT_38 
+	.sbyte "   The Son is the radiance of   " ; 38
+CREDIT_39 
+	.sbyte "    GOD's glory and the exact   " ; 39
+CREDIT_40 
+	.sbyte "  representation of his being,  " ; 40 
+CREDIT_41 
+	.sbyte "  sustaining all things by his  " ; 41
+CREDIT_42 
+	.sbyte "  powerful word. After he had   " ; 42
+CREDIT_43 
+	.sbyte " provided purification for sins," ; 43
+CREDIT_44 
+	.sbyte "  he sat down at the right hand " ; 44
+CREDIT_45 
+	.sbyte "    of the Majesty in heaven.   " ; 45
+CREDIT_46 
+	.sbyte "-- Hebrews 1:3                  " ; 46
 	;                                         ; repeat common 00
 	;            - - + - -                    ; repeat common 01
 	; Repeat 00 to scroll credits off....5, 6, 7 lines?
@@ -974,18 +953,21 @@ CREDIT_46 .sbyte "-- Hebrews 1:3                  " ; 46
 ; Four second delay (240) frames for viewing.
 ; Vscroll up 1 scanline until all lines gone.
 ; 
-TITLE_STOP_GO .byte 0 ; set by mainline to indicate title is working or not.
+TITLE_STOP_GO 
+	.byte 0 ; set by mainline to indicate title is working or not.
 ; 0 = stop.
 ; 1 = go.  (after main routine has initialized restart).
 
-TITLE_PLAYING .byte 0 ; flag indicates title animation stage in progress. 
+TITLE_PLAYING 
+	.byte 0 ; flag indicates title animation stage in progress. 
 ; 0 == not running -- title lines in 0/empty state. 
 ; 1 == clear. no movement. (Running a couple second of delay.)
 ; 2 == Text fly-in is in progress. 
 ; 3 == pause for public admiration. 
 ; 4 == Text  VSCROLL to top of screen in progress.  return to 0 state.
 
-TITLE_TIMER .byte 0 ; set by Title handler for pauses.
+TITLE_TIMER 
+	.byte 0 ; set by Title handler for pauses.
 
 
 TITLE_HPOSP0 
@@ -997,8 +979,10 @@ TITLE_SIZEP0
 TITLE_GPRIOR 
 	.byte 1 ; Current P/M Priority in title. 
 
-TITLE_VSCROLL .byte 0 ; current fine scroll position. (0 to 7)
-TITLE_CSCROLL .byte 0 ; current coarse scroll position. (0 to 4)
+TITLE_VSCROLL 
+	.byte 0 ; current fine scroll position. (0 to 7)
+TITLE_CSCROLL 
+	.byte 0 ; current coarse scroll position. (0 to 4)
 
 
 ; Display List -- Title Scrolling coarse scroll conditions.
@@ -1044,32 +1028,51 @@ TITLE_PM_CHAR_POS ; Title Line offset for each character
 ; for 8, then resetting, and coarse scrolling.
 ; 32 steps for each.
 TITLE_VSCROLL_TABLE
-	.byte 0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7
+	.byte 0,1,2,3,4,5,6,7
+	.byte 0,1,2,3,4,5,6,7
+	.byte 0,1,2,3,4,5,6,7
+	.byte 0,1,2,3,4,5,6,7
 
 TITLE_CSCROLL_TABLE ; index into TITLE_FRAME_TABLE
-	.byte 1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4
+	.byte 1,1,1,1,1,1,1,1
+	.byte 2,2,2,2,2,2,2,2
+	.byte 3,3,3,3,3,3,3,3
+	.byte 4,4,4,4,4,4,4,4
 
 TITLE_WSYNC_OFFSET_TABLE ; DLI: Skip lines before starting color bar. 
-	.byte 20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,0,0,0,0,0,0,0,0,0,0,0
+	.byte 20,19,18,17,16,15,14,13
+	.byte 12,11,10,9,8,7,6,5
+	.byte 4,3,2,1,0,0,0,0
+	.byte 0,0,0,0,0,0,0,0
 
 TITLE_WSYNC_COLOR_TABLE ; DLI: How many lines to read from color tables.
-	.byte 12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,11,10,9,8,7,6,5,4,3,2,1
+	.byte 12,12,12,12,12,12,12,12
+	.byte 12,12,12,12,12,12,12,12
+	.byte 12,12,12,12,12,11,10,9
+	.byte 8,7,6,5,4,3,2,1
 
 TITLE_COLOR_COUNTER_PLUS ; Flag to double-increment COLOR_COUNTER when losing lines.
-	.byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+	.byte 0,0,0,0,0,0,0,0
+	.byte 0,0,0,0,0,0,0,0
+	.byte 1,1,1,1,1,1,1,1
+	.byte 1,1,1,1,1,1,1,1
 
 TITLE_SCROLL_COUNTER ; index into the tables above. 0 to 32
 	.byte 0
 
 	
 ; DLI parts.
-TITLE_WSYNC_OFFSET  .byte 20 ; Number of scan lines to drop through before color draw
+TITLE_WSYNC_OFFSET  
+	.byte 20 ; Number of scan lines to drop through before color draw
 
-TITLE_WSYNC_COLOR   .byte 12 ; Number of scan lines to do color bars
+TITLE_WSYNC_COLOR   
+	.byte 12 ; Number of scan lines to do color bars
 
-TITLE_COLOR_COUNTER .byte 0  ; Index into color table
+TITLE_COLOR_COUNTER 
+	.byte 0  ; Index into color table
 
-TITLE_DLI_PMCOLOR   .byte 0
+TITLE_DLI_PMCOLOR ; PM Index into TITLE_DLI_PMCOLOR_TABLE   
+	.byte 0
 
 TITLE_DLI_PMCOLOR_TABLE ; which text color to use for P/M. referenced by TITLE_CURRENT_FLYIN.
 	.byte 0,1,2,3,0,1,2,3
@@ -1469,30 +1472,42 @@ THUMPER_RIGHT_SIZE_TABLE
 ; THUMPER-BUMPER Proximity set by MAIN code:
 ; 
 THUMPER_PROXIMITY
-THUMPER_PROXIMITY_TOP   .byte $09 
-THUMPER_PROXIMITY_LEFT  .byte $09 
-THUMPER_PROXIMITY_RIGHT .byte $09 
+THUMPER_PROXIMITY_TOP   
+	.byte $09 
+THUMPER_PROXIMITY_LEFT  
+	.byte $09 
+THUMPER_PROXIMITY_RIGHT 
+	.byte $09 
 ;
 ; VBI maintains animation frame progress
 ;
 THUMPER_FRAME
-THUMPER_FRAME_TOP   .byte 0 ; 0 is no animation. VBI Sets DLI vector for this.
-THUMPER_FRAME_LEFT  .byte 0 ; 0 is no animation. DLI sets HPOS and SIZE
-THUMPER_FRAME_RIGHT .byte 0 ; 0 is no animation. DLI sets HPOS and SIZE
+THUMPER_FRAME_TOP   
+	.byte 0 ; 0 is no animation. VBI Sets DLI vector for this.
+THUMPER_FRAME_LEFT  
+	.byte 0 ; 0 is no animation. DLI sets HPOS and SIZE
+THUMPER_FRAME_RIGHT 
+	.byte 0 ; 0 is no animation. DLI sets HPOS and SIZE
 ;
 ; VBI maintains animation frames
 ;
 THUMPER_FRAME_LIMIT
-THUMPER_FRAME_LIMIT_TOP   .byte 12 ; at 12 return to 0
-THUMPER_FRAME_LIMIT_LEFT  .byte 6  ; at 6 return to 0
-THUMPER_FRAME_LIMIT_RIGHT .byte 6  ; at 6 return to 0
+THUMPER_FRAME_LIMIT_TOP   
+	.byte 12 ; at 12 return to 0
+THUMPER_FRAME_LIMIT_LEFT  
+	.byte 6  ; at 6 return to 0
+THUMPER_FRAME_LIMIT_RIGHT 
+	.byte 6  ; at 6 return to 0
 ;
 ; VBI sets colors, and DLI2 sets them on screen.
 ;
 THUMPER_COLOR
-THUMPER_COLOR_TOP   .byte 0
-THUMPER_COLOR_LEFT  .byte 0
-THUMPER_COLOR_RIGHT .byte 0
+THUMPER_COLOR_TOP   
+	.byte 0
+THUMPER_COLOR_LEFT  
+	.byte 0
+THUMPER_COLOR_RIGHT 
+	.byte 0
 
 ; VBI sets the color of the thumper based on 
 ; the distance of the ball determined by the MAIN
@@ -1687,34 +1702,40 @@ THUMPER_PROXIMITY_COLORTHUMPER_COLOR_TOP
 ; 1 = center
 ; 2 = right
 ;
-BRICK_SCREEN_LMS  .byte 0,20,41
+BRICK_SCREEN_LMS  
+	.byte 0,20,41
 ;
 ; and HSCROL value to align the correct bytes...
 ;
-BRICK_SCREEN_HSCROL .byte 8,0,0
+BRICK_SCREEN_HSCROL 
+	.byte 8,0,0
 ;
 ; Move immediately to target positions if value is 1.
 ; Copy the BRICK_BRICK_SCREEN_TARGET_LMS_LMS and 
 ; BRICK_SCREEN_TARGET_HSCROL to all current positions.
 ;
-BRICK_SCREEN_IMMEDIATE_POSITION .byte 0
+BRICK_SCREEN_IMMEDIATE_POSITION 
+	.byte 0
 ;
 ; Offsets of Display List LMS pointers (low byte) of each row position.
 ; BRICK_BASE+1, +5, +9, +13, +17, +21, +25, +29 is low byte of row.
-;
-BRICK_CURRENT_LMS_OFFSETS ; DISPLAY LIST: offset from BRICK_BASE to low byte of each LMS address
+; DISPLAY LIST: offset from BRICK_BASE to low byte of each LMS address
+BRICK_CURRENT_LMS_OFFSETS 
 	.byte 1,5,9,13,17,21,25,29
 ;
 ; DLI: HSCROL/fine scrolling position.
 ;
-BRICK_CURRENT_HSCROL .byte 0,0,0,0,0,0,0,0
+BRICK_CURRENT_HSCROL 
+	.byte 0,0,0,0,0,0,0,0
 ;
 ; DLI: Set line colors....  introducing a little more variety than 
 ; the original game and elsewhere on the screen.
 ;
-BRICK_CURRENT_COLOR ; Base color for gradient
-	.byte COLOR_PINK+2,  COLOR_PURPLE+2,     COLOR_RED_ORANGE+2,  COLOR_ORANGE2+2
-	.byte COLOR_GREEN+2, COLOR_BLUE_GREEN+2, COLOR_LITE_ORANGE+2, COLOR_ORANGE_GREEN+2
+BRICK_CURRENT_COLOR ; Base color for gradients
+	.byte COLOR_PINK+2,        COLOR_PURPLE+2,     
+	.byte COLOR_RED_ORANGE+2,  COLOR_ORANGE2+2
+	.byte COLOR_GREEN+2,       COLOR_BLUE_GREEN+2, 
+	.byte COLOR_LITE_ORANGE+2, COLOR_ORANGE_GREEN+2
 ;
 ; MAIN code sets the following sets of configuration
 ; per each line of the playfield.  VBI takes these
@@ -1723,32 +1744,39 @@ BRICK_CURRENT_COLOR ; Base color for gradient
 ; Target LMS offset/coarse scroll to move the display. 
 ; One target per display line... line 0 to line 7.
 ;
-BRICK_SCREEN_TARGET_LMS .byte 20,20,20,20,20,20,20,20
+BRICK_SCREEN_TARGET_LMS 
+	.byte 20,20,20,20,20,20,20,20
 ;
 ; Target HSCROL/fine scrolling destination for moving display.
 ;
-BRICK_SCREEN_TARGET_HSCROL .byte 0,0,0,0,0,0,0,0
+BRICK_SCREEN_TARGET_HSCROL 
+	.byte 0,0,0,0,0,0,0,0
 ;
 ; Increment or decrement the movement direction? 
 ; -1= view Left/graphics right, +1=view Right/graphics left
 ;
-BRICK_SCREEN_DIRECTION .byte 1,-1,1,-1,1,-1,1,-1
+BRICK_SCREEN_DIRECTION 
+	.byte 1,-1,1,-1,1,-1,1,-1
 ;
 ; Brick Screen speed to move (HSCROLs +/- per frame)
 ;
-BRICK_SCREEN_HSCROL_MOVE .byte 1,1,2,2,3,3,4,4
+BRICK_SCREEN_HSCROL_MOVE 
+	.byte 1,1,2,2,3,3,4,4
 ;
 ; Frame count to delay start of transition.
 ;
-BRICK_SCREEN_MOVE_DELAY .byte 7,6,5,4,3,2,1,0
+BRICK_SCREEN_MOVE_DELAY 
+	.byte 7,6,5,4,3,2,1,0
 ;
 ; MAIN flag to VBI requesting start of screen transition.
 ;
-BRICK_SCREEN_START_SCROLL .byte 0
+BRICK_SCREEN_START_SCROLL 
+	.byte 0
 ;
 ; VBI Feedback to MAIN that it is busy moving
 ;
-BRICK_SCREEN_IN_MOTION .byte 0
+BRICK_SCREEN_IN_MOTION 
+	.byte 0
 ;
 ;
 ;
@@ -1948,37 +1976,52 @@ GAMEOVER_LINE_TABLE_HI
 ; Side note -- maybe a future iteration will utilize the boom-o-matic blocks 
 ; during Title or Game Over sequences.
 
-ENABLE_BOOM .byte 0
+ENABLE_BOOM 
+	.byte 0
 
-BOOM_1_REQUEST .byte 0,0,0,0,0,0,0,0 ; MAIN provides flag to add this brick. 0 = no brick. 1 = new brick.
-BOOM_2_REQUEST .byte 0,0,0,0,0,0,0,0 ; MAIN provides flag to add this brick.
+BOOM_1_REQUEST 
+	.byte 0,0,0,0,0,0,0,0 ; MAIN provides flag to add this brick. 0 = no brick. 1 = new brick.
+BOOM_2_REQUEST 
+	.byte 0,0,0,0,0,0,0,0 ; MAIN provides flag to add this brick.
 
-BOOM_1_REQUEST_BRICK .byte 0,0,0,0,0,0,0,0 ; MAIN provides brick number in this row. 0 - 13
-BOOM_2_REQUEST_BRICK .byte 0,0,0,0,0,0,0,0 ; MAIN provides brick number in this row. 0 - 13
+BOOM_1_REQUEST_BRICK 
+	.byte 0,0,0,0,0,0,0,0 ; MAIN provides brick number in this row. 0 - 13
+BOOM_2_REQUEST_BRICK 
+	.byte 0,0,0,0,0,0,0,0 ; MAIN provides brick number in this row. 0 - 13
 
-BOOM_1_CYCLE .byte 0,0,0,0,0,0,0,0 ; VBI needs one for each row (0 = no animation)
-BOOM_2_CYCLE .byte 0,0,0,0,0,0,0,0 ; VBI needs one for each row
+BOOM_1_CYCLE 
+	.byte 0,0,0,0,0,0,0,0 ; VBI needs one for each row (0 = no animation)
+BOOM_2_CYCLE 
+	.byte 0,0,0,0,0,0,0,0 ; VBI needs one for each row
 
-BOOM_1_BRICK .byte 0,0,0,0,0,0,0,0 ; VBI uses Brick number on the row doing the Boom Cycle.
-BOOM_2_BRICK .byte 0,0,0,0,0,0,0,0 ; VBI uses Brick number on the row doing the Boom Cycle.
+BOOM_1_BRICK 
+	.byte 0,0,0,0,0,0,0,0 ; VBI uses Brick number on the row doing the Boom Cycle.
+BOOM_2_BRICK 
+	.byte 0,0,0,0,0,0,0,0 ; VBI uses Brick number on the row doing the Boom Cycle.
 
-BOOM_1_HPOS .byte 0,0,0,0,0,0,0,0 ; DLI needs HPOS1 for row
-BOOM_2_HPOS .byte 0,0,0,0,0,0,0,0 ; DLI needs HPOS2 for row
+BOOM_1_HPOS 
+	.byte 0,0,0,0,0,0,0,0 ; DLI needs HPOS1 for row
+BOOM_2_HPOS 
+	.byte 0,0,0,0,0,0,0,0 ; DLI needs HPOS2 for row
 
-BOOM_1_SIZE .byte 0,0,0,0,0,0,0,0 ; DLI needs P/M SIZE1 for row
-BOOM_2_SIZE .byte 0,0,0,0,0,0,0,0 ; DLI needs P/M SIZE2 for row
+BOOM_1_SIZE 
+	.byte 0,0,0,0,0,0,0,0 ; DLI needs P/M SIZE1 for row
+BOOM_2_SIZE 
+	.byte 0,0,0,0,0,0,0,0 ; DLI needs P/M SIZE2 for row
 
-BOOM_1_COLPM .byte 0,0,0,0,0,0,0,0 ; DLI needs P/M COLPM1 for row
-BOOM_2_COLPM .byte 0,0,0,0,0,0,0,0 ; DLI needs P/M COLPM2 for row
+BOOM_1_COLPM 
+	.byte 0,0,0,0,0,0,0,0 ; DLI needs P/M COLPM1 for row
+BOOM_2_COLPM 
+	.byte 0,0,0,0,0,0,0,0 ; DLI needs P/M COLPM2 for row
 
 BOOM_CYCLE_COLOR ; by row by cycle frame -- 9 frames per boom animation
-	.byte $0E,COLOR_PINK|$0E,         COLOR_PINK|$0C,         COLOR_PINK|$0A,         COLOR_PINK|$08,         COLOR_PINK|$06,         COLOR_PINK|$04,$02,$00
-	.byte $0E,COLOR_PURPLE|$0E,       COLOR_PURPLE|$0C,       COLOR_PURPLE|$0A,       COLOR_PURPLE|$08,       COLOR_PURPLE|$06,       COLOR_PURPLE|$04,$02,$00
-	.byte $0E,COLOR_RED_ORANGE|$0E,   COLOR_RED_ORANGE|$0C,   COLOR_RED_ORANGE|$0A,   COLOR_RED_ORANGE|$08,   COLOR_RED_ORANGE|$06,   COLOR_RED_ORANGE|$04,$02,$00
-	.byte $0E,COLOR_ORANGE2|$0E,      COLOR_ORANGE2|$0C,      COLOR_ORANGE2|$0A,      COLOR_ORANGE2|$08,      COLOR_ORANGE2|$06,      COLOR_ORANGE2|$04,$02,$00
-	.byte $0E,COLOR_GREEN|$0E,        COLOR_GREEN|$0C,        COLOR_GREEN|$0A,        COLOR_GREEN|$08,        COLOR_GREEN|$06,        COLOR_GREEN|$04,$02,$00
-	.byte $0E,COLOR_BLUE_GREEN|$0E,   COLOR_BLUE_GREEN|$0C,   COLOR_BLUE_GREEN|$0A,   COLOR_BLUE_GREEN|$08,   COLOR_BLUE_GREEN|$06,   COLOR_BLUE_GREEN|$04,$02,$00
-	.byte $0E,COLOR_LITE_ORANGE|$0E,  COLOR_LITE_ORANGE|$0C,  COLOR_LITE_ORANGE|$0A,  COLOR_LITE_ORANGE|$08,  COLOR_LITE_ORANGE|$06,  COLOR_LITE_ORANGE|$04,$02,$00
+	.byte $0E,COLOR_PINK|$0E,         COLOR_PINK|$0C,         COLOR_PINK|$0A,         COLOR_PINK|$08,         COLOR_PINK|$06,         COLOR_PINK|$04,        $02,$00
+	.byte $0E,COLOR_PURPLE|$0E,       COLOR_PURPLE|$0C,       COLOR_PURPLE|$0A,       COLOR_PURPLE|$08,       COLOR_PURPLE|$06,       COLOR_PURPLE|$04,      $02,$00
+	.byte $0E,COLOR_RED_ORANGE|$0E,   COLOR_RED_ORANGE|$0C,   COLOR_RED_ORANGE|$0A,   COLOR_RED_ORANGE|$08,   COLOR_RED_ORANGE|$06,   COLOR_RED_ORANGE|$04,  $02,$00
+	.byte $0E,COLOR_ORANGE2|$0E,      COLOR_ORANGE2|$0C,      COLOR_ORANGE2|$0A,      COLOR_ORANGE2|$08,      COLOR_ORANGE2|$06,      COLOR_ORANGE2|$04,     $02,$00
+	.byte $0E,COLOR_GREEN|$0E,        COLOR_GREEN|$0C,        COLOR_GREEN|$0A,        COLOR_GREEN|$08,        COLOR_GREEN|$06,        COLOR_GREEN|$04,       $02,$00
+	.byte $0E,COLOR_BLUE_GREEN|$0E,   COLOR_BLUE_GREEN|$0C,   COLOR_BLUE_GREEN|$0A,   COLOR_BLUE_GREEN|$08,   COLOR_BLUE_GREEN|$06,   COLOR_BLUE_GREEN|$04,  $02,$00
+	.byte $0E,COLOR_LITE_ORANGE|$0E,  COLOR_LITE_ORANGE|$0C,  COLOR_LITE_ORANGE|$0A,  COLOR_LITE_ORANGE|$08,  COLOR_LITE_ORANGE|$06,  COLOR_LITE_ORANGE|$04, $02,$00
 	.byte $0E,COLOR_ORANGE_GREEN|$0E, COLOR_ORANGE_GREEN|$0C, COLOR_ORANGE_GREEN|$0A, COLOR_ORANGE_GREEN|$08, COLOR_ORANGE_GREEN|$06, COLOR_ORANGE_GREEN|$04,$02,$00
 
 BOOM_CYCLE_OFFSET ; Base offset (row * 9) to the color entries and P/M images for the cycle.
@@ -2017,17 +2060,24 @@ BOOM_ANIMATION_FRAMES ; 7 bytes of Player image data per each cycle frame -- 8th
 ; VBI code updates the Player image and sets NEW as CURRENT.
 ; Everything else -- collisions and reactions are established by the MAIN code.
 
-ENABLE_BALL .byte 0 ; set by MAIN to turn on and off the ball.
+ENABLE_BALL 
+	.byte 0 ; set by MAIN to turn on and off the ball.
 
-BALL_CURRENT_X .byte 0
-BALL_CURRENT_Y .byte 0
+BALL_CURRENT_X 
+	.byte 0
+BALL_CURRENT_Y 
+	.byte 0
 
-BALL_HPOS .byte 0 ; this lets VBI tell DLI to remove from screen without zeroing CURRENT
+BALL_HPOS 
+	.byte 0 ; this lets VBI tell DLI to remove from screen without zeroing CURRENT
 
-BALL_NEW_X .byte 0 ; DLI sets HPOSP0
-BALL_NEW_Y .byte 0 ; VBI moves image
+BALL_NEW_X 
+	.byte 0 ; DLI sets HPOSP0
+BALL_NEW_Y 
+	.byte 0 ; VBI moves image
 
-BALL_COLOR .byte $0E ; and color.  anways bright.
+BALL_COLOR 
+	.byte $0E ; and color.  anways bright.
 
 
 ;===============================================================================
@@ -2061,14 +2111,18 @@ BALL_COLOR .byte $0E ; and color.  anways bright.
 ; of the program indicates a jump to a prior step, so the last three 
 ; speed types are repeated.
 
-BALL_SPEED_SEQUENCE .byte 0,1,2,3,4,5,3 ; Note that the last step causes a loop of 3, 4, 5
+BALL_SPEED_SEQUENCE 
+	.byte 0,1,2,3,4,5,3 ; Note that the last step causes a loop of 3, 4, 5
 
 ; (inc this value, then get new current value from Speed sequence table. ) 
-BALL_SPEED_CURRENT_SEQUENCE .byte 0 ; which step in the sequence above is current. 
+BALL_SPEED_CURRENT_SEQUENCE 
+	.byte 0 ; which step in the sequence above is current. 
 
-BALL_SPEED_CURRENT_STEP .byte 0 ; 0 to 2
+BALL_SPEED_CURRENT_STEP 
+	.byte 0 ; 0 to 2
 
-BALL_BOUNCE_COUNT .byte 6 ; decrement at each paddle hit. When it reaches 0 it resets 
+BALL_BOUNCE_COUNT 
+	.byte 6 ; decrement at each paddle hit. When it reaches 0 it resets 
 ; to 6 and the next speed sequence begins..
 
 BALL_X_STEPS 
@@ -2097,17 +2151,27 @@ BALL_Y_STEPS
 
 ; State Controls
 
-ENABLE_CREDIT_SCROLL .byte 0 ; MAIN: Flag to stop/start scrolling/visible text
-SCROLL_DO_FADE .byte 0       ; MAIN: 0 = no fade.  1= fade up.  2 = fade down.
-SCROLL_TICK_DELAY .byte 0    ; MAIN: number of frames to delay per scroll step.
-SCROLL_BASE .word 0          ; MAIN: Base table to start scrolling
-SCROLL_MAX_LINES .byte 0     ; MAIN: number of lines in scroll before restart.
+ENABLE_CREDIT_SCROLL 
+	.byte 0 ; MAIN: Flag to stop/start scrolling/visible text
+SCROLL_DO_FADE 
+	.byte 0       ; MAIN: 0 = no fade.  1= fade up.  2 = fade down.
+SCROLL_TICK_DELAY 
+	.byte 0    ; MAIN: number of frames to delay per scroll step.
+SCROLL_BASE 
+	.word 0          ; MAIN: Base table to start scrolling
+SCROLL_MAX_LINES 
+	.byte 0     ; MAIN: number of lines in scroll before restart.
 
-SCROLL_CURRENT_TICK .byte 0    ; VBI: Current tick for delay, decrementing to 0.
-SCROLL_IN_FADE .byte 0         ; VBI: fade is in progress? 0 = no. 1 = up. 2 = down
-SCROLL_CURRENT_FADE .byte 0    ; VBI/DLI: VBI set for DLI - Current Fade Start position
-SCROLL_CURRENT_LINE .byte 0    ; VBI: increment for start line of window.
-SCROLL_CURRENT_VSCROLL .byte 0 ; VBI/DLI: VBI sets for DLI -- Current Fine Vertical Scroll vertical position. 
+SCROLL_CURRENT_TICK 
+	.byte 0    ; VBI: Current tick for delay, decrementing to 0.
+SCROLL_IN_FADE 
+	.byte 0         ; VBI: fade is in progress? 0 = no. 1 = up. 2 = down
+SCROLL_CURRENT_FADE 
+	.byte 0    ; VBI/DLI: VBI set for DLI - Current Fade Start position
+SCROLL_CURRENT_LINE 
+	.byte 0    ; VBI: increment for start line of window.
+SCROLL_CURRENT_VSCROLL 
+	.byte 0 ; VBI/DLI: VBI sets for DLI -- Current Fine Vertical Scroll vertical position. 
 
 ; Scroll text has shading on first and last lines.
 ; 6 values used at a time.
@@ -2115,9 +2179,11 @@ SCROLL_CURRENT_VSCROLL .byte 0 ; VBI/DLI: VBI sets for DLI -- Current Fine Verti
 ; CURRENT_FADE should range from 0 to 6.
 ; 0 is off.  6 is fully lit.
 ; The DLI on the first line begins at SCROLL_CURRENT_FADE and reads 6 consecutive values for text brightness.
-SCROLL_FADE_START_LINE_TABLE .byte $0,$0,$0,$0,$0,$0,$2,$4,$6,$8,$a,$c
+SCROLL_FADE_START_LINE_TABLE 
+	.byte $0,$0,$0,$0,$0,$0,$2,$4,$6,$8,$a,$c
 ; The DLI in the last line reads from SCROLL_CURRENT_FADE decrementing to 0 for text brightness.
-SCROLL_FADE_END_LINE_TABLE   .byte $0,$2,$4,$6,$8,$a,$c
+SCROLL_FADE_END_LINE_TABLE   
+	.byte $0,$2,$4,$6,$8,$a,$c
   
 ; Credits
 CREDIT_SCROLL_TABLE ; Addresses of text lines for scroll
@@ -2337,10 +2403,12 @@ SUBTITLE_SCROLL_TABLE_SIZE=19  ; Address/words up to here, then loop around
 ; .222.... = ........ + .222.... + ........  == $00 + $70 + $00
 
 
-ENABLE_PADDLE .byte 0 ; Paddle displayed on screen?  0 = no.  1 = yes.
+ENABLE_PADDLE 
+	.byte 0 ; Paddle displayed on screen?  0 = no.  1 = yes.
 
 ; MAIN sets paddle image.  VBI set HPOS based on size.
-PADDLE_SIZE .byte 0 ; MAIN to VBI: Paddle Size  0 = Normal. 1 = Small.
+PADDLE_SIZE 
+	.byte 0 ; MAIN to VBI: Paddle Size  0 = Normal. 1 = Small.
 ;
 ; Convert Potentiometer value to Paddle screen position.
 ;
@@ -2374,7 +2442,8 @@ PADDLE_SMALL_POSITION_TABLE ; 228 bytes of HPOS coordinates corresponding to pad
 ; Positioning is very simple. Lookup potentiometer value in
 ; the table.  Set Player HPOS accordingly.
 ;
-PADDLE_HPOS .byte 0 ; VBI to DLI: X position of Player(s) making up paddle.
+PADDLE_HPOS 
+	.byte 0 ; VBI to DLI: X position of Player(s) making up paddle.
 
 ; CURRENT STATE:
 ; Paddle is made of several Player objects providing 
@@ -2391,11 +2460,13 @@ PADDLE_HPOS .byte 0 ; VBI to DLI: X position of Player(s) making up paddle.
 ;
 ; MAIN signals Paddle strike
 ;
-PADDLE_STRIKE .byte $00 
+PADDLE_STRIKE 
+	.byte $00 
 ;
 ; VBI maintains animation frames
 ;
-PADDLE_FRAME .byte 0 ; 9 to 0 
+PADDLE_FRAME 
+	.byte 0 ; 9 to 0 
 ;
 ; VBI sets the color of the top line of the paddle 
 ; (COLPM3) when the MAIN signals that the paddle 
@@ -2406,7 +2477,8 @@ PADDLE_STRIKE_COLOR_ANIM
 ;
 ; VBI chooses color, and DLI sets them on screen.
 ;
-PADDLE_STRIKE_COLOR .byte $94
+PADDLE_STRIKE_COLOR 
+	.byte $94
 
 
 ;===============================================================================
@@ -2441,11 +2513,13 @@ PADDLE_STRIKE_COLOR .byte $94
 ;
 
 	     
-ENABLE_BALL_COUNTER .byte 0
+ENABLE_BALL_COUNTER 
+	.byte 0
 ;
 ; How many game balls remaining?  5 max.
 ;
-BALL_COUNTER .byte 5
+BALL_COUNTER 
+	.byte 5
 ;
 ; Ball Counter Title positions for DLI
 ;
@@ -2463,7 +2537,8 @@ BALL_TITLE_PM_BYTES_TABLE ; ordered PM0, PM1, PM2
 ;
 ; Don't need 60fps bounce.
 ;
-SINE_WAVE_DELAY .byte 0 
+SINE_WAVE_DELAY 
+	.byte 0 
 ;
 ; animation state for each ball, 5 max
 ;
@@ -2522,7 +2597,8 @@ SINEWAVE
 ; to exceed the range of 12 digits, so there is little chance of rollover.
 ;
 ;
-ENABLE_SCORE .byte 0
+ENABLE_SCORE 
+	.byte 0
 ;
 REAL_SCORE                        ; MAIN updates this
 	.byte 0,0,0,0,0,0,0,0,0,0,0,0
@@ -2547,8 +2623,34 @@ DISPLAYED_SCORE_SCREEN_POSITION
 ;
 DISPLAYED_SCORE_CHAR_COLOR
 	.byte $00,$40,$00,$40,$00,$40,$00,$40,$00,$40,$00,$40
+;
+; Color table for each text object in the 
+; score/status line.
+; COLPF0/COLPF1 score.
+; COLPF3 "BALLS" label
+;
+DISPLAYED_SCORE_COLOR0
+	.byte $60,$62,$64,$66,$68,$6a,$6c,$6e
+	.byte $60,$62,$64,$66,$68,$6a,$6c,$6e
+	.byte $60,$62,$64,$66,$68,$6a,$6c,$6e
+	.byte $60,$62,$64,$66,$68,$6a,$6c,$6e
 
+DISPLAYED_SCORE_COLOR1
+	.byte $86,$84,$82,$80,$8e,$8c,$8a,$88
+	.byte $86,$84,$82,$80,$8e,$8c,$8a,$88
+	.byte $86,$84,$82,$80,$8e,$8c,$8a,$88
+	.byte $86,$84,$82,$80,$8e,$8c,$8a,$88
 
+DISPLAYED_BALLS_COLOR
+	.byte $00,$02,$04,$06,$08,$0a,$0c,$0e
+	.byte $0e,$0c,$0a,$08,$06,$04,$02,$00
+	.byte $00,$02,$04,$06,$08,$0a,$0c,$0e
+	.byte $0e,$0c,$0a,$08,$06,$04,$02,$00
+	
+DISPLAYED_BALLS_SCORE_COLOR_INDEX
+	.byte 0
+
+	
 ;===============================================================================
 ; SOUND EFFECTS (not display)
 ;===============================================================================
@@ -2557,7 +2659,8 @@ DISPLAYED_SCORE_CHAR_COLOR
 ; is actually the score counting ticks.)
 ; Voice 2 and 3 == score counter
 
-ENABLE_SOUND .byte 0 ; Enable sound playing. $0 = off, $1 = on.
+ENABLE_SOUND 
+	.byte 0 ; Enable sound playing. $0 = off, $1 = on.
 ;
 ; An index for each voice.
 ;
@@ -2587,10 +2690,10 @@ SOUND_AUDF_TABLE ; AUDF -- Frequency -- a little quirky tone shaping
 	.byte $10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$00
 ; index $28/40 is bounce brick 1.  A 2ms, D 168ms, S 0, R 168 ms
 	.byte $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$00
-; index $28/40 is bounce brick 1.  A 2ms, D 168ms, S 0, R 168 ms
+; index $28/40 is bounce brick 2.  A 2ms, D 168ms, S 0, R 168 ms
 	.byte $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$00
-; index $28/40 is bounce brick 1.  A 2ms, D 168ms, S 0, R 168 ms
+; index $28/40 is bounce brick 3.  A 2ms, D 168ms, S 0, R 168 ms
 	.byte $40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$00
-; index $28/40 is bounce brick 1.  A 2ms, D 168ms, S 0, R 168 ms
+; index $28/40 is bounce brick 4.  A 2ms, D 168ms, S 0, R 168 ms
 	.byte $50,$50,$50,$50,$50,$50,$50,$50,$50,$50,$50,$50,$00
 	
