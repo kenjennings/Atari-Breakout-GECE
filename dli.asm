@@ -516,6 +516,9 @@ DLI_6
 	ldx #$94        ; For second  scan line reset paddle color 
 	sta COLPM3      ; to its intended default. 
 	
+	lda #>CHARACTER_SET_01 ; Mode 6 text. Title and score.
+	sta CHBASE
+	
 End_DLI_6 ; End of routine.  Point to next routine.
 	lda #<DLI_7
 	sta VDSLST
@@ -533,6 +536,10 @@ End_DLI_6 ; End of routine.  Point to next routine.
 
 
 
+; DLI7: Fairly basic.  Just prettify the text.
+; "BALLS" is a little indicator in the top left 
+; corner of the last row of text.
+; The other two colors are for the score.
 
 DLI_7
 	pha
@@ -540,10 +547,31 @@ DLI_7
 	pha
 	tya
 	pha
+	
+	; Since the "Balls" is at the top of the line, and 
+	; the Score is 12 scan lines centered over two lines
+	; then we don;t have to count out 16 entire sca lines.
+	; Therefore 13...
+	ldy #13    
+	ldx DISPLAYED_BALLS_SCORE_COLOR_INDEX
 
-	; Magic here
+Loop_Color_Balls_Score	
+	lda DISPLAYED_BALLS_COLOR,x      ; "Balls" indicator color
+	sta WSYNC
+	sta COLPF3
+	
+	lda DISPLAYED_SCORE_COLOR0,x     ; Score digits are two colors...
+	sta COLPF0
 
-End_DLI_7 ; End of routine.  Point to first routine.
+	lda DISPLAYED_SCORE_COLOR1,x
+	sta COLPF1
+
+	inx
+	dey 
+	bpl Loop_Color_Balls_Score
+	
+
+End_DLI_7 ; End of routines.  Point to first routine.
 	lda #<DLI_1
 	sta VDSLST
 	lda >#DLI_1
