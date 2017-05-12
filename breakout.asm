@@ -61,6 +61,9 @@ BRICK_HEIGHT =         7   ; including the following blank lines (used when mult
 ;
 MIN_PIXEL_X = PLAYFIELD_LEFT_EDGE_NORMAL+BRICK_LEFT_OFFSET
 MAX_PIXEL_X = MIN_PIXEL_X+152 ; Actual last color clock of last brick.
+
+PIXELS_COLS = MAX_PIXEL_X-MIN_PIXEL_X ; number of real pixels on line (153)
+
 MIN_BALL_X =  MIN_PIXEL_X ; because PM/left edge is same
 MAX_BALL_X =  MAX_PIXEL_X-1 ; because ball is 2 color clocks wide
 
@@ -121,35 +124,69 @@ NUM_BIN_TO_TEXT = 16
 ; Then, this needs to subtract 11 (12-1) for the size of the paddle, == $93.
 PADDLE_MAX = (PLAYFIELD_RIGHT_EDGE_NORMAL-PLAYFIELD_LEFT_EDGE_NORMAL-11)
 
+
 ;===============================================================================
 ;    ZERO PAGE VARIABLES
 ;===============================================================================
 ; These will be used when needed to pass extra parameters to 
 ; routines when you can't use A, X, Y registers for other reasons.
 ; Essentially, think of these as extra data registers.
+;
+; Also used as permanent variables with lower latency than 
+; regular memory.
 
 ; The Atari OS has defined purpose for most of the Page Zero 
 ; locations.  Since no Floating Point will be used here we'll 
 ; borrow the FP registers in Page Zero.
 
-PARAM1 =   $D6     ; FR0 $D6
-PARAM2 =   $D7     ; FR0 $D7
-PARAM3 =   $D8     ; FR0 $D8
-PARAM4 =   $D9     ; FR0 $D9
-PARAM5 =   $DA     ; FRE $DA
-PARAM6 =   $DB     ; FRE $DB 
-PARAM7 =   $DC     ; FRE $DC  
-PARAM8 =   $DD     ; FRE $DD  
+PARAM_00 = $D4 ; ZMR_ROBOTO -- Is Mr Roboto playing the automatic demo mode?
+PARAM_01 = $D6 ; 
+PARAM_02 = $D7 ; 
+PARAM_03 = $D8 ; ZCOLLISION  -- If Brick is present - 0 = no, 1 = yes
+PARAM_04 = $D9 ; ZBRICK_LINE -- Ycoord reduced to line 1-8
+PARAM_05 = $DA ; ZBRICK_COL  -- Xcoord reduced to brick number 1-14
+PARAM_06 = $DB ; ZCOORD_Y    -- Ycoord for collision check
+PARAM_07 = $DC ; ZCOORD_X    -- Xcoord for collision check  
+PARAM_08 = $DD ;   
 
-ZEROPAGE_POINTER_1 =   $DE     ; 
-ZEROPAGE_POINTER_2 =   $E0     ; 
-ZEROPAGE_POINTER_3 =   $E2     ; 
-ZEROPAGE_POINTER_4 =   $E4     ; 
-ZEROPAGE_POINTER_5 =   $E6     ; 
-ZEROPAGE_POINTER_6 =   $E8     ; 
-ZEROPAGE_POINTER_7 =   $EA     ; 
-ZEROPAGE_POINTER_8 =   $EC     ; 
-ZEROPAGE_POINTER_9 =   $EE     ; ZTITLE_COLPM0 -- VBI sets for DLI to use
+; And more Zero Page fun.  This is assembly, dude.
+; No BASIC cart means we can get craaaazy.
+
+PARAM_09 = $A0 ; ZDIR_X -- +1 Right, -1 Left.  Indicates direction of travel.
+PARAM_10 = $A1 ; ZDIR_Y -- +1 Down, -1 Up.  Indicates direction of travel.
+PARAM_11 = $A2 ;  
+PARAM_12 = $A3 ;  
+PARAM_13 = $A4 ;  
+PARAM_14 = $A5 ;  
+PARAM_15 = $A6 ;  
+PARAM_16 = $A7 ;  
+PARAM_17 = $A8 ;  
+PARAM_18 = $A9 ;  
+PARAM_19 = $AA ;  
+PARAM_20 = $AB ;  
+PARAM_21 = $AC ;  
+PARAM_22 = $AD ;  
+PARAM_23 = $AE ;  
+PARAM_24 = $AF ;  
+PARAM_25 = $B0 ;  
+PARAM_26 = $B1 ;  
+PARAM_27 = $B2 ;  
+PARAM_28 = $B3 ;  
+PARAM_29 = $B4 ;  
+PARAM_30 = $B5 ;  
+PARAM_31 = $B6 ;  
+PARAM_32 = $B7 ;  
+
+
+ZEROPAGE_POINTER_1 = $DE ; 
+ZEROPAGE_POINTER_2 = $E0 ; 
+ZEROPAGE_POINTER_3 = $E2 ; 
+ZEROPAGE_POINTER_4 = $E4 ; 
+ZEROPAGE_POINTER_5 = $E6 ; 
+ZEROPAGE_POINTER_6 = $E8 ; 
+ZEROPAGE_POINTER_7 = $EA ; 
+ZEROPAGE_POINTER_8 = $EC ; 
+ZEROPAGE_POINTER_9 = $EE ; ZTITLE_COLPM0 -- VBI sets for DLI to use
 
 ;===============================================================================
 ;   LOAD START
@@ -225,8 +262,9 @@ auto_next
 
 ;===============================================================================
 ; Program Start/Entry.  This address goes in the DOS Run Address.
-PRG_START 
 ;===============================================================================
+PRG_START 
+
 
 	jsr setup  ; setup graphics
 
@@ -257,12 +295,12 @@ start_mr_roboto	; timer ended? so Mr Roboto wakes up for work
 	lda last_event
 	cmp #1  ; by this point this should be true.
 	bne do_player_start ; not the timer.  go go player.
-	inc mr_roboto  ; timer expired, so enable mr_roboto
+	inc ZMR_ROBOTO  ; timer expired, so enable mr_roboto
 	bne do_start_game
 	
 do_player_start ; make sure roboto is not playing.
 	lda #0;
-	sta mr_roboto
+	sta ZMR_ROBOTO
 
 	; ========== GAME INITIALIZATION ==========
 
@@ -277,7 +315,7 @@ do_while_gameplay
 	; button and timer events matter if mr_roboto is playing
 	beq do_play_game ;nothing special, continue game
 
-	lda mr_roboto ; button or timer expired and check if
+	lda ZMR_ROBOTO ; button or timer expired and check if
 	beq do_play_game ; mr roboto not running, so it doesn't matter
 
 	lda last_event
@@ -307,7 +345,7 @@ do_while_waiting_game_over
 	
 	; If Mr Roboto is not at work, skip turning on attract mode.
 check_mr_roboto_employment	
-	lda mr_roboto
+	lda ZMR_ROBOTO
 	beq skip_attract
 
 	; if mr roboto is at work intentionally turn on the attract mode on...	
@@ -401,7 +439,7 @@ game_cycle
 	; It was originally called twice to allow the 
 	; keyboard/joystick controls to move the 
 	; paddle faster than the ball.
-	lda mr_roboto ; auto play on?
+	lda ZMR_ROBOTO ; auto play on?
 	bne autobot;
 	jsr move_paddle ; otherwise do player movement.
 	clc
@@ -1206,31 +1244,6 @@ JoyButton
 	rts
 
 
-;===============================================================================
-; CLEAR SCREEN
-;===============================================================================
-; Clears the screen using a chosen character.
-; A = Character to clear the screen with
-; Y = Color to fill with
-;===============================================================================
-
-; This works as-is on Atari (without the color map) since 
-; the custom display list lays out the screen memeory in 
-; the same place as the C64.
-
-ClearScreen
-	ldx #$00                        ; Clear X register
-ClearLoop
-	sta SCREEN_MEM,x                ; Write the character (in A) at SCREEN_MEM + x
-	sta SCREEN_MEM + 250,x          ; at SCREEN_MEM + 250 + x
-	sta SCREEN_MEM + 500,x          ; at SCREEN_MEM + 500 + x
-	sta SCREEN_MEM + 750,x          ; st SCREEN_MEM + 750 + x
-	inx
-	cpx #250                        ; is X > 250?
-	bne ClearLoop                   ; if not - continue clearing
-
-	rts
-
 
 ;===============================================================================
 ; Check for button press or auto_next timer.
@@ -1344,7 +1357,7 @@ WaitTick60
 
 skip_29secTick
 
-	lda mr_roboto ; in auto play mode?
+	lda ZMR_ROBOTO ; in auto play mode?
 	bne exit_waitFrame ; Yes. then exit to skip playing sound.
 
 	lda #$00  ; When Mr Roboto is NOT running turn off the "attract"
@@ -1356,82 +1369,6 @@ exit_waitFrame
 	rts
 
 
-;===============================================================================
-; DISPLAY TEXT
-;===============================================================================
-; Displays a line of text.      '?' ($00) is the end of text character
-;                               '/' ($2f) is the line break character
-; ZEROPAGE_POINTER_1 = pointer to text data
-; PARAM1 = X
-; PARAM2 = Y
-; PARAM3 = Color
-; Modifies ZEROPAGE_POINTER_2 and ZEROPAGE_POINTER_3
-;
-; NOTE : all text should be in lower case :  
-; byte 'hello world?' or 
-; byte 'hello world',$00
-;===============================================================================
-
-; We're going to copy the C64 memory layout on the Atari for the screen 
-; graphics, so this part is largely very similar. Some changes are needed:
-;
-; No color table, so PARAM3, and ZEROPAGE_POINTER_3 are ignored.
-;
-; Since this is essentially POKE'ing values to the screen memory the 
-; text is assumed to be in Atari's screen memory/internal values, and 
-; not ASCII/ATASCII. (Use .SBYTE in atasm/Mac65)
-;
-; The 0 value is a valid character (blank space) in the Atari 
-; internal format, so a different value is needed to terminate the 
-; string. Let's go with $FF for the end of string. 
-;
-; C64's $2F is a valid character in Atari internal format ("O"), so 
-; we'll go with the Atari "standard" $9B for the End of Line.
-;===============================================================================
-
-DisplayText
-	ldx PARAM2
-
-	lda SCREEN_LINE_OFFSET_TABLE_LO,x
-
-	sta ZEROPAGE_POINTER_2
-	lda SCREEN_LINE_OFFSET_TABLE_HI,x
-	sta ZEROPAGE_POINTER_2 + 1
-
-	lda ZEROPAGE_POINTER_2
-	clc
-	adc PARAM1
-	sta ZEROPAGE_POINTER_2
-	lda ZEROPAGE_POINTER_2 + 1
-	adc #0
-	sta ZEROPAGE_POINTER_2 + 1
-
-	ldy #0
-?inLineLoop
-	lda (ZEROPAGE_POINTER_1),y  
-		cmp #$FF 	;  EOT character for Atari
-	beq ?endMarkerReached                 
-		cmp #$9B		;  EOL character for Atari
-	beq ?lineBreak
-	sta (ZEROPAGE_POINTER_2),y
-	iny
-	jmp ?inLineLoop
-
-?lineBreak
-	iny
-	tya
-	clc
-	adc ZEROPAGE_POINTER_1
-	sta ZEROPAGE_POINTER_1
-	lda #0
-	adc ZEROPAGE_POINTER_1 + 1
-	sta ZEROPAGE_POINTER_1 + 1
-
-	inc PARAM2        
-	jmp DisplayText
-
-?endMarkerReached
-	rts
 
 
 ;===============================================================================
@@ -1578,361 +1515,6 @@ nextSoundIndex
 	inc SOUND_INDEX ; increment index for next call.
 	
 exitSoundService
-	safeRTS ; restore registers and CPU flags, then RTS
-
-
-;===============================================================================
-; Atari Stop Screen
-;===============================================================================
-; Stop all screen activity.
-; Stop DLI activity.
-; Kill Sprites (Player/Missile graphics)
-;
-; No registers modified.
-;===============================================================================
-
-AtariStopScreen
-
-	saveRegs ; put CPU flags and registers on stack
-
-	lda #0
-	sta SDMCTL ; ANTIC stop DMA for display list, screen, and player/missiles
-
-; Note that SDMCTL is copied to DMACTL during the Vertical Blank Interrupt, so 
-; this won't take effect until the start of the next frame.  
-; Therefore, remember to make sure the end of frame is reached before resetting 
-; the display list address, the display list interrupt vector, and turning
-; on the display DMA.  
-
-	sta GRACTL ; GTIA -- stop accepting DMA data for Player/Missiles
-
-	lda #NMI_VBI ; set Non-Maskable Interrupts without NMI_DLI for display list interrupts
-	sta NMIEN
-
-; Excessive cleanliness.  
-; Make sure all players/missiles are off screen
-; Clear Player/Missile bitmap images.
-	jsr AtariMovePMOffScreen
-	jsr AtariClearPMImage
-
-	safeRTS ; restore registers and CPU flags, then RTS
-
-
-;===============================================================================
-; Atari Start Screen
-;===============================================================================
-; Start Player/Missiles and the screen.
-; P/M Horizontal positions were moved off screen earlier, so there 
-; should be no glitches during startup.
-;
-; No registers modified.
-;===============================================================================
-
-AtariStartScreen
-
-	saveRegs ; put CPU flags and registers on stack
-
-	; Tell ANTIC where to find the custom character set.
-	lda #>CUSTOM_CSET 
-	sta CHBAS
-
-	;  tell ANTIC where to find the new display list.
-	lda #<DISPLAY_LIST 
-	sta SDLSTL
-	lda #>DISPLAY_LIST ;
-	sta SDLSTH 
-
-	; Tell ANTIC where P/M memory occurs for DMA to GTIA
-	lda #>PLAYER_MISSILE_BASE
-	sta PMBASE
-
-	; Enable GTIA to accept DMA to the GRAFxx registers.
-	lda #ENABLE_PLAYERS | ENABLE_MISSILES 
-	sta GRACTL
-
-	; Start screen and P/M graphics
-	; The OS copies SDMCTL to DMACTL during the Vertical Blank Interrupt, 
-	; so we are guaranteed that this cleanly restarts the display 
-	; during the next VBI.
-	lda #ENABLE_DL_DMA | PM_1LINE_RESOLUTION | ENABLE_PM_DMA | PLAYFIELD_WIDTH_NORMAL
-	sta SDMCTL
-
-	; Conveniently, the C64 game is only using 4 colors for bricks,  
-	; so the C64 color cells will be simulated on the Atari using 
-	; the multi-color character mode, a custom character set, and 
-	; four color registers.
-
-	lda #COLOR_PINK+$04  ; "Red"
-	sta COLOR0 ; COLPF0	character block $20  
-	
-	lda #COLOR_RED_ORANGE+$06  ; "Orange"
-	sta COLOR1 ; COLPF1    character block $40 
-	
-	lda #COLOR_GREEN+$06  ; "Green"
-	sta COLOR2 ; COLPF2    character block $60  
-	
-	lda #COLOR_LITE_ORANGE+$0C  ; "Yellow"
-	sta COLOR3 ; COLPF3 ; character block $E0  ($60 + high bit $80) 
-
-	safeRTS ; restore registers and CPU flags, then RTS
-
-
-;===============================================================================
-; Atari Move P/M off screen
-;===============================================================================
-; Reset all Player/Missile horizontal positions to 0. Setting HPOS to 0 guarantees 
-; they are not visible even if the P/M graphics registers have junk in it no matter 
-; what the width is for P/M graphics.
-;
-; And while we're here, reset all Player/Missile width sizes to 0/Normal, except
-; for Player 0 - force that one to be double width.
-;
-; No registers modified.
-;===============================================================================
-
-AtariMovePMOffScreen
-
-	saveRegs ; put CPU flags and registers on stack
-
-	lda #$00 ; 0 position
-	ldx #$03 ; four objects, 3 to 0
-
-?LoopZeroPMPosition
-	sta HPOSP0,x ; Player positions 3, 2, 1, 0
-	sta SIZEP0,x ; Player width 3, 2, 1, 0
-	sta HPOSM0,x ; Missiles 3, 2, 1, 0 just to be sure.
-	dex
-	bpl ?LoopZeroPMPosition
-	sta SIZEM ; and Missile size 3, 2, 1, 0
-
-	lda #PM_SIZE_DOUBLE ; Double width Player graphics
-	sta SIZEP0;
-
-	safeRTS ; restore registers and CPU flags, then RTS
-
-
-;===============================================================================
-; Atari Clear P/M memory
-;===============================================================================
-; Zero the Player/Missile image maps.
-;
-; This only clears memory used for Players 0 and 1.
-;
-; No registers modified.
-;===============================================================================
-
-AtariClearPMImage
-
-	saveRegs ; put CPU flags and registers on stack
-
-	lda #$00 ; 
-	ldx #$00 ; count 0 to 255.
-
-?LoopZeroPMImage
-;	sta PLAYER_MISSILE_BASE+PMADR_1LINE_MISSILES,x ; Missiles
-	sta PLAYER_MISSILE_BASE+PMADR_1LINE_PLAYER0,x  ; Player 0
-	sta PLAYER_MISSILE_BASE+PMADR_1LINE_PLAYER1,x  ; Player 1 
-;	sta PLAYER_MISSILE_BASE+PMADR_1LINE_PLAYER2,x  ; Player 2
-;	sta PLAYER_MISSILE_BASE+PMADR_1LINE_PLAYER3,x  ; Player 3 
-	inx
-	bne ?LoopZeroPMImage
-
-	safeRTS ; restore registers and CPU flags, then RTS
-
-
-;===============================================================================
-; Atari Set Player 1 Image as the Ball
-;===============================================================================
-; Initialize the image in the Player 1 bitmap.
-; Set Starting X/Y position for Player1/Ball.
-; 
-; On C64 the Sprite image is:
-; $38 ..xxx...
-; $7c .xxxxx..
-; $fe xxxxxxx. 
-; $fe xxxxxxx.
-; $fe xxxxxxx.
-; $7c .xxxxx..
-; $38 ..xxx...
-;
-; On Atari the normal Player pixel width is 1 color clock per bit, so 
-; the image needs to be compressed to cover a similar, approximate area 
-; in color clocks:
-; $20 ..x.....
-; $70 .xxx....
-; $f8 xxxxx... 
-; $f8 xxxxx...
-; $f8 xxxxx...
-; $70 .xxx....
-; $20 ..x.....
-;
-; C64 set Sprite Y position to 144.  This mileage may vary on the Atari.  128 is better. 
-;
-; A == Sprite X postion
-; Y == Sprite Y postion
-; MODIFIES : 
-;===============================================================================
-
-AtariSetBallImage
-
-	jsr AtariClearBallImage
-	
-	sta HPOSP1 ; set orizontal position.
-	sta BALL_PLAYER_X ; and save soft copy.
-	sty BALL_PLAYER_Y ; and save soft copy of the Y too.
-	
-	saveRegs ; put CPU flags and registers on stack
-
-	ldx #0;  ; 7 scan lines 0, 1, 2, 3, 4, 5, 6
-
-?LoopCopyBallImage
-	lda BALL_PLAYER_IMAGE,x  ; Read ball image from table
-	sta PLAYER_MISSILE_BASE+PMADR_1LINE_PLAYER1,y ; put into Y position in player memory
-	iny 
-	inx
-	cpx #7
-	bne ?LoopCopyBallImage
-
-	safeRTS ; restore registers and CPU flags, then RTS
-
-
-;===============================================================================
-; Atari Clear Player 1 Ball
-;===============================================================================
-; Zero the bytes of the Player 1 bitmap at the Y position.
-; Zero +2 to compensate for misadjusted Y at end of game.
-;===============================================================================
-
-AtariClearBallImage
-
-	saveRegs ; put CPU flags and registers on stack
-
-	ldy BALL_PLAYER_Y ; get the Y position back.
-	ldx #8;  ; 7 scan lines 6, 5, 4, 3, 2, 1, 0  +2 more lines
-	lda #0 ;
-
-?LoopClearBallImage
-	sta PLAYER_MISSILE_BASE+PMADR_1LINE_PLAYER1-1,y ; put into Y position in player memory
-	iny 
-	dex
-	bpl ?LoopClearBallImage
-
-	safeRTS ; restore registers and CPU flags, then RTS
-
-
-;===============================================================================
-;															       PM RIPPLE UP 
-;===============================================================================
-; Move Player/ball image up one scan line from current position
-; looping from top line to bottom/end.
-;
-;===============================================================================
-; An Atari-specific peculiarity.
-; 
-;===============================================================================
-
-AtariPMRippleUp
-	
-	saveRegs ; Save regs so this is non-disruptive to caller
-
-	ldy BALL_PLAYER_Y ;
-
-	ldx #6  ; 6 to 0 is 7 bytes of data (to avoid cmp)
-
-; Copy 7 bytes.
-; Code-size optimal version.
-; Execution speed version would be 7 sets of LDA, STA
-?RippleUp ; the optimal code size version
-	lda PLAYER_MISSILE_BASE+PMADR_1LINE_PLAYER1,y ; from source
-	sta PLAYER_MISSILE_BASE+PMADR_1LINE_PLAYER1-1,y ; to target one line higher
-
-	iny ; new source/target one line lower
-	dex ; to avoid cmp...
-	bpl ?RippleUp ; 6 to 0 is positive. end when $FF
-
-	lda #0
-	sta PLAYER_MISSILE_BASE+PMADR_1LINE_PLAYER1-1,y ; clear the last source byte.
-	
-	dec BALL_PLAYER_Y ; One scan line higher
-
-	safeRTS ; restore registers and CPU flags, then RTS
-	
-	
-;===============================================================================
-;														       PM RIPPLE DOWN 
-;===============================================================================
-; Move Player/ball image DOWN one scan line from current position
-; looping from bottom/end byte to top.
-;
-;===============================================================================
-; An Atari-specific peculiarity.
-; 
-;===============================================================================
-
-AtariPMRippleDown
-
-	saveRegs ; Save regs so this is non-disruptive to caller
-
-	ldy BALL_PLAYER_Y ;
-
-	ldx #6  ; 6 to 0 is 7 bytes of data (to avoid cmp)
-
-; Copy 7 bytes.
-; Code-size optimal version.
-; Execution speed version would be 7 sets of LDA, STA
-; Dangerous code: +6/+7 is potential border condition 
-; at top/bottom edges of Player bitmap. 
-?RippleDown
-	lda PLAYER_MISSILE_BASE+PMADR_1LINE_PLAYER1+6,y ; from source
-	sta PLAYER_MISSILE_BASE+PMADR_1LINE_PLAYER1+7,y ; to target one line lower
-
-	dey ; new source/target one line higher 
-	dex ; to avoid cmp
-	bpl ?RippleDown ; 6 to 0 is positive. end when $FF
-
-	lda #0
-	sta PLAYER_MISSILE_BASE+PMADR_1LINE_PLAYER1+7,y ; clear the last source byte.
-
-	inc BALL_PLAYER_Y ; One scan line lower
-
-	safeRTS ; restore registers and CPU flags, then RTS
-	
-	
-;===============================================================================
-; Atari Set Player 0 Image as the Paddle
-;===============================================================================
-; Copy the Paddle image into the Player 0 bitmap.
-;
-; On C64 the Sprite image is $ff,$f8 (or 13 pixels xxxxxxxxxxxxx) copied to four lines.
-; Double width makes this 13 med-res pixels. (On a real NTSC TV approx 12 color clocks.)
-; Double height mode is also set to make each line of data 2 scan lines tall.
-;
-; On Atari the normal Player width is 8 color clocks. So, double width Player size 
-; is used to make the Player wide enough to cover 12 color clocks.  
-; 12 color clocks at double width data is 6 bits of data, or $FC.
-; To make the image 8 scan lines tall this will simply copy the data 8 times.
-;
-; C64 set Sprite Y position to 144.  This mileage may vary on the Atari.  128 is better.
-;
-; No registers modified.
-;===============================================================================
-
-AtariSetPaddleImage
-
-	saveRegs ; put CPU flags and registers on stack
-
-	ldx #7;  ; 8 scan lines 7, 6, 5, 4, 3, 2, 1, 0
-	lda #$FC ; xxxxxx 6 bits double width == 12 color clocks.
-
-; C64 puts paddle at vertical position 224.  
-; On the Atari that's 2 and a half text lines too low, or 20 scan lines.
-; 224 is now 204.
-?LoopCopyPaddleImage
-	sta PLAYER_MISSILE_BASE+PMADR_1LINE_PLAYER0+204,x
-	
-	dex
-	bpl ?LoopCopyPaddleImage
-
 	safeRTS ; restore registers and CPU flags, then RTS
 
 
