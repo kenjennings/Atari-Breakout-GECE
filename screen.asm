@@ -132,3 +132,108 @@ AtariStartScreen
 	sta COLOR3 ; COLPF3 ; character block $E0  ($60 + high bit $80) 
 
 	safeRTS ; restore registers and CPU flags, then RTS
+
+
+
+	
+.local	
+;===============================================================================
+; Determine Brick X and Y from current X/Y test coordinate.
+;===============================================================================
+; Input: 
+; X reg: X coordinate to convert to brick position
+; Y reg: Y coordinate to convert to brick position
+; 
+; Output:
+; ZCOORD_X:    Copy of input X coordinate
+; ZCOORD_Y:    Copy of input Y coordinate
+; ZBRICK_COL:  Calculated brick number of X coordinate. (1-14)  Or -1 if not valid
+; ZBRICK_LINE:  Calculated line number of bricks.  (1-8) or -1 if not valid 
+;===============================================================================
+DetermineBrickXY
+
+	saveRegs ; put CPU flags and registers on stack
+
+	jsr DetermineBrickX
+	jsr DetermineBrickY
+
+	safeRTS ; restore registers and CPU flags, then RTS
+	
+
+.local	
+;===============================================================================
+; Determine Brick X from current X test coordinate.
+;===============================================================================
+; Input: 
+; X reg: X coordinate to convert to brick position
+; 
+; Output:
+; ZCOORD_X:    Copy of input X coordinate
+; ZBRICK_COL:  Calculated brick number of X coordinate. (1-14)  Or -1 if not valid
+;===============================================================================
+DetermineBrickX
+
+	saveRegs ; put CPU flags and registers on stack
+
+	stx ZCOORD_X
+	
+	lda #$FF
+	sta ZBRICK_COL
+	
+	txa
+	
+	sec
+	sbc #MIN_PIXEL_X ; PLAYFIELD_LEFT_EDGE_NORMAL + BRICK_LEFT_OFFSET
+	cmp #[PIXEL_COLS+1]; should be 154
+
+	bcs ?ExitRoutine
+	
+	tax 
+	lda BALL_XPOS_TO_BRICK_TABLE,x
+	sta ZBRICK_COL
+
+?ExitRoutine	
+	safeRTS ; restore registers and CPU flags, then RTS
+	
+
+
+.local	
+;===============================================================================
+; Determine Brick Y from current Y test coordinate.
+;===============================================================================
+; Input: 
+; Y reg: Y coordinate to convert to brick position
+; 
+; Output:
+; ZCOORD_Y:    Copy of input Y coordinate
+; ZBRICK_LINE:  Calculated line number of bricks.  (1-8) or -1 if not valid 
+;===============================================================================
+DetermineBrickY
+
+	saveRegs ; put CPU flags and registers on stack
+
+	sty ZCOORD_Y
+
+	lda #$FF
+	sta ZBRICK_LINE
+
+	tya
+	
+	cmp #BRICK_TOP_OFFSET ; Less than the first scan line of bricks?
+	bcc ?ExitRoutine
+
+	cmp #[BRICK_BOTTOM_OFFSET]
+	bcs ?ExitRoutine
+	
+	sec
+	sbc #BRICK_TOP_OFFSET
+	
+	tay
+	lda BALL_YPOS_TO_BRICK_TABLE,y
+	sta ZBRICK_LINE
+	
+?ExitRoutine
+	safeRTS ; restore registers and CPU flags, then RTS
+	
+
+
