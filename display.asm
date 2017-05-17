@@ -1710,13 +1710,6 @@ BRICK_SCREEN_LMS
 BRICK_SCREEN_HSCROL 
 	.byte 8,0,0
 ;
-; Move immediately to target positions if value is 1.
-; Copy the BRICK_BRICK_SCREEN_TARGET_LMS_LMS and 
-; BRICK_SCREEN_TARGET_HSCROL to all current positions.
-;
-BRICK_SCREEN_IMMEDIATE_POSITION 
-	.byte 0
-;
 ; Offsets of Display List LMS pointers (low byte) of each row position.
 ; BRICK_BASE+1, +5, +9, +13, +17, +21, +25, +29 is low byte of row.
 ; DISPLAY LIST: offset from BRICK_BASE to low byte of each LMS address
@@ -1773,6 +1766,13 @@ BRICK_SCREEN_MOVE_DELAY
 BRICK_SCREEN_START_SCROLL 
 	.byte 0
 ;
+; MAIN signal to move immediately to target positions if value is 1.
+; Copy the BRICK_BRICK_SCREEN_TARGET_LMS_LMS and 
+; BRICK_SCREEN_TARGET_HSCROL to all current positions.
+;
+BRICK_SCREEN_IMMEDIATE_POSITION 
+	.byte 0
+;
 ; VBI Feedback to MAIN that it is busy moving
 ;
 BRICK_SCREEN_IN_MOTION 
@@ -1791,6 +1791,22 @@ BRICK_LINE_TABLE_HI
 	entry .= 0
 	.rept 8 ; repeat for 8 lines
 	.byte >[BRICK_LINE0+[entry*64]]
+	entry .= entry+1 ; next entry in table.
+	.endr
+;
+; Base location of visible bricks (in the middle of the line)
+;
+BRICK_BASE_LINE_TABLE_LO
+	entry .= 0
+	.rept 8 ; repeat for 8 lines
+	.byte <[BRICK_LINE0+[entry*64]+21]
+	entry .= entry+1 ; next entry in table.
+	.endr
+	
+BRICK_BASE_LINE_TABLE_HI
+	entry .= 0
+	.rept 8 ; repeat for 8 lines
+	.byte >[BRICK_LINE0+[entry*64]+21]
 	entry .= entry+1 ; next entry in table.
 	.endr
 
@@ -1817,6 +1833,31 @@ BRICK_MASK_TABLE
 
 	.byte $10, ~11111100, ~00000000, ~00111111
 	.byte $12, ~10000000, ~00000000, ~00000000  ; This would also clear byte 21
+;
+; Test an individual brick, numbered 0 to 13.
+; Starting byte offset for visible screen memory, then the AND mask 
+; for 3 bytes because some bricks cross three bytes.
+; If anything reports as 1 then a pric is present.
+; (Almost the same as BRICK_MASK_TABLE EOR $FF)
+;
+BRICK_TEST_TABLE
+	.byte $00, ~00011111, ~11111000, ~00000000
+	.byte $01, ~00000011, ~11111111, ~00000000
+	.byte $03, ~01111111, ~11100000, ~00000000
+	.byte $04, ~00001111, ~11111100, ~00000000
+
+	.byte $05, ~00000001, ~11111111, ~10000000
+	.byte $07, ~00111111, ~11110000, ~00000000
+	.byte $08, ~00000111, ~11111110, ~00000000
+	.byte $0a, ~11111111, ~11000000, ~00000000
+
+	.byte $0b, ~00011111, ~11111000, ~00000000
+	.byte $0c, ~00000011, ~11111111, ~00000000
+	.byte $0e, ~01111111, ~11100000, ~00000000
+	.byte $0f, ~00001111, ~11111100, ~00000000
+
+	.byte $10, ~00000001, ~11111111, ~10000000
+	.byte $12, ~00111111, ~11110000, ~00000000
 
 
 ;
