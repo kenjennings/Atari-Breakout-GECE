@@ -46,23 +46,25 @@
 ; Let's define some useful offsets and sizes. 
 ; Could become useful somewhere else.
 ;
-BRICK_LEFT_OFFSET =   3  ; offset from normal playfield left edge to left edge of brick 
-BRICK_RIGHT_OFFSET =  12 ; offset from normal playfield left edge to the right edge of first brick
+BRICK_LEFT_OFFSET =   3  ; offset from normal PLAYFIELD LEFT edge to left edge of brick 
+BRICK_RIGHT_OFFSET =  12 ; offset from normal PLAYFIELD LEFT edge to the right edge of first brick
+
 BRICK_PIXEL_WIDTH =   10 ; Actual drawn pixels in brick.
 BRICK_WIDTH =         11 ; including the trailing blank space separating bricks 
 
-BRICK_TOP_OFFSET =     78  ; First scan line of top line of bricks. just a guess right now
+BRICK_TOP_OFFSET =     78  ; First scan line of top line of bricks.
 BRICK_TOP_END_OFFSET = 82  ; Last scan line of the top line of bricks.
-BRICK_BOTTOM_OFFSET =  133 ; Last scan line of bottom line of bricks.
+BRICK_BOTTOM_OFFSET =  131 ; Last scan line of bottom line of bricks.
+
 BRICK_LINE_HEIGHT =    5   ; Actual drawn graphics scanlines.
 BRICK_HEIGHT =         7   ; including the following blank lines (used when multiplying for position) 
 ;
 ; Playfield MIN/MAX travel areas relative to the ball.
 ;
-MIN_PIXEL_X = PLAYFIELD_LEFT_EDGE_NORMAL+BRICK_LEFT_OFFSET
-MAX_PIXEL_X = MIN_PIXEL_X+152 ; Actual last color clock of last brick.
+MIN_PIXEL_X = PLAYFIELD_LEFT_EDGE_NORMAL+BRICK_LEFT_OFFSET ; 48 + 3 = 51
+MAX_PIXEL_X = MIN_PIXEL_X+152 ; Actual last color clock of last brick. 51 + 152 = 203
 
-PIXELS_COLS = MAX_PIXEL_X-MIN_PIXEL_X ; number of real pixels on line (153)
+PIXELS_COLS = MAX_PIXEL_X-MIN_PIXEL_X+1 ; number of real pixels on line (153)
 
 MIN_BALL_X =  MIN_PIXEL_X ; because PM/left edge is same
 MAX_BALL_X =  MAX_PIXEL_X-1 ; because ball is 2 color clocks wide
@@ -185,7 +187,7 @@ ZEROPAGE_POINTER_4 = $E4 ;
 ZEROPAGE_POINTER_5 = $E6 ; 
 ZEROPAGE_POINTER_6 = $E8 ; 
 ZEROPAGE_POINTER_7 = $EA ; 
-ZEROPAGE_POINTER_8 = $EC ; 
+ZEROPAGE_POINTER_8 = $EC ; ZBRICK_BASE   -- Pointer to start of bricks on a line.
 ZEROPAGE_POINTER_9 = $EE ; ZTITLE_COLPM0 -- VBI sets for DLI to use
 
 ;===============================================================================
