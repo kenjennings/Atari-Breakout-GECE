@@ -133,10 +133,9 @@ AtariStartScreen
 
 	safeRTS ; restore registers and CPU flags, then RTS
 
-
-
 	
-.local	
+	
+	.local	
 ;===============================================================================
 ; Determine Brick X and Y from current X/Y test coordinate.
 ;===============================================================================
@@ -159,6 +158,7 @@ DetermineBrickXY
 
 	safeRTS ; restore registers and CPU flags, then RTS
 	
+	
 
 .local	
 ;===============================================================================
@@ -168,29 +168,32 @@ DetermineBrickXY
 ; X reg: X coordinate to convert to brick position
 ; 
 ; Output:
-; ZCOORD_X:    Copy of input X coordinate
-; ZBRICK_COL:  Calculated brick number of X coordinate. (1-14)  Or -1 if not valid
+; ZCOORD_X:   Copy of input X coordinate
+; ZBRICK_COL: Calculated brick number of X coordinate.(1-14) Or -1 if not valid
+;
+; Coordinates are tightly managed by other code, so it should not be possible
+; for the tested value to exceed the established screen borders.
 ;===============================================================================
 DetermineBrickX
 
 	saveRegs ; put CPU flags and registers on stack
 
-	stx ZCOORD_X
+	stx ZCOORD_X     ; Save X color clock coordinate
 	
-	lda #$FF
+	lda #$FF         ; Column = -1 (until a better value is calculated)
 	sta ZBRICK_COL
 	
-	txa
+	txa              ; Adjust the 51 to 203 range to 0 to 152 
 	
-	sec
-	sbc #MIN_PIXEL_X ; PLAYFIELD_LEFT_EDGE_NORMAL + BRICK_LEFT_OFFSET
-	cmp #[PIXEL_COLS+1]; should be 154
+	sec              
+	sbc #MIN_PIXEL_X ; PLAYFIELD_LEFT_EDGE_NORMAL + BRICK_LEFT_OFFSET = 51
+	cmp #[PIXEL_COLS]; should be 153
 
-	bcs ?ExitRoutine
+	bcs ?ExitRoutine ; greater than lookup range.
 	
 	tax 
-	lda BALL_XPOS_TO_BRICK_TABLE,x
-	sta ZBRICK_COL
+	lda BALL_XPOS_TO_BRICK_TABLE,x ; convert X Color clock to brick column number
+	sta ZBRICK_COL                 ; Save brick column.
 
 ?ExitRoutine	
 	safeRTS ; restore registers and CPU flags, then RTS
@@ -212,28 +215,148 @@ DetermineBrickY
 
 	saveRegs ; put CPU flags and registers on stack
 
-	sty ZCOORD_Y
+	sty ZCOORD_Y     ; Save Y scan line coordinate
 
-	lda #$FF
+	lda #$FF         ; Line = -1 (until a better value is calculated)
 	sta ZBRICK_LINE
 
-	tya
+	tya              
 	
 	cmp #BRICK_TOP_OFFSET ; Less than the first scan line of bricks?
 	bcc ?ExitRoutine
 
-	cmp #[BRICK_BOTTOM_OFFSET]
+	cmp #[BRICK_BOTTOM_OFFSET+1] ; 132 = 131 + 1 
 	bcs ?ExitRoutine
 	
-	sec
+	sec                  ; Adjust the 78 to 131 range to 0 to 53 
 	sbc #BRICK_TOP_OFFSET
 	
 	tay
-	lda BALL_YPOS_TO_BRICK_TABLE,y
-	sta ZBRICK_LINE
+	lda BALL_YPOS_TO_BRICK_TABLE,y ; convert y scan line to brick line number
+	sta ZBRICK_LINE                ; save brick line.
 	
+?ExitRoutine
+	safeRTS ; restore registers and CPU flags, then RTS
+
+
+	
+.local	
+;===============================================================================
+; Determine if there is a brick at position X/Y
+;===============================================================================
+; Input: 
+; ZBRICK_COL:  Calculated brick number of X coordinate. (1-14)  Or -1 if not valid
+; ZBRICK_LINE:  Calculated line number of bricks.  (1-8) or -1 if not valid 
+; 
+; Output:
+; ZCOLLISION:  There is/is not a brick at the given line/column.
+;              0 = No Brick. !0 = Yes, there is a brick.
+;===============================================================================
+DetermineBrickCollision
+
+	saveRegs ; put CPU flags and registers on stack
+
+	lda #0           ; Clear Collision flag
+	sta ZCOLLISION
+
+	ldx ZBRICK_LINE  ; Get the line number (1-8) 
+	beq ?ExitRoutine ; Zero?  Then no line, no collision.
+	bmi ?ExitRoutine ; negative?  Then no line, no collision.
+	
+	dex              ; Adjust line value 1-8 to 0-7.
+	
+	lda BRICK_BASE_LINE_TABLE_LO,x ; Setup Zero Page pointer to 
+	sta ZBRICK_BASE                ; the Brick Base address for 
+	lda BRICK_BASE_LINE_TABLE_HI,x ; this line.
+	sta ZBRICK_BASE+1
+
+	ldy ZBRICK_COL                 ; Get the column number (1-14)
+	beq ?ExitRoutine               ; Zero? Then no column, so no collision.
+	bmi ?ExitRoutine               ; Negative? Then no column, so no collision.
+	
+	dey              ; adjust column value 1-14 to 0-13
+	
+	tya              ; Multiply by 4 for index into BRICK_TEST_TABLE
+	asl a            ; times 2
+	asl a            ; times 4
+	tax
+	
+	ldy BRICK_TEST_TABLE,x ; First entry in record is byte offset for brick
+
+	inx                    ; Next entry in record is a byte of test data
+
+?LoopCheckBrick
+	lda (ZBRICK_BASE),y    ; Read byte from brick line at offset.
+	and BRICK_TEST_TABLE,x ; Test bits.
+
+	sta ZCOLLISION         ; store result - 0 or !0
+
+	bne ?ExitRoutine       ; if !0 then a collision is found.  Comparison done.
+	
+	iny                    ; Next byte in brick screen memory
+	inx                    ; Next entry in the Test table.
+	
+	cpx #4                 ; If exceeded record length then comparison is done.
+	bne ?LoopCheckBrick
+		
 ?ExitRoutine
 	safeRTS ; restore registers and CPU flags, then RTS
 	
 
+.local	
+;===============================================================================
+; Erase the brick at position X/Y
+;===============================================================================
+; Input: 
+; ZBRICK_COL:  Calculated brick number of X coordinate. (1-14)  Or -1 if not valid
+; ZBRICK_LINE:  Calculated line number of bricks.  (1-8) or -1 if not valid 
+; 
+; Output:
+; N/A:  Brick in screen memory is erased.  Surrounding bricks are untouched.
+;===============================================================================
+ClearBrickXY
 
+	saveRegs ; put CPU flags and registers on stack
+
+	ldx ZBRICK_LINE  ; Get the line number (1-8) 
+	beq ?ExitRoutine ; Zero?  Then no line, no brick to erase.
+	bmi ?ExitRoutine ; negative?  Then no line, no brick to erase.
+	
+	dex              ; Adjust line value 1-8 to 0-7.
+	
+	lda BRICK_BASE_LINE_TABLE_LO,x ; Setup Zero Page pointer to 
+	sta ZBRICK_BASE                ; the Brick Base address for 
+	lda BRICK_BASE_LINE_TABLE_HI,x ; this line.
+	sta ZBRICK_BASE+1
+
+	ldy ZBRICK_COL                 ; Get the column number (1-14)
+	beq ?ExitRoutine               ; Zero? Then no column, so no collision.
+	bmi ?ExitRoutine               ; Negative? Then no column, so no collision.
+	
+	dey              ; adjust column value 1-14 to 0-13
+	
+	tya              ; Multiply by 4 for index into BRICK_TEST_TABLE
+	asl a            ; times 2
+	asl a            ; times 4
+	tax
+	
+	ldy BRICK_MASK_TABLE,x ; First entry in record is byte offset for brick
+
+	inx                    ; Next entry in record is a byte of mask data
+
+?LoopCheckBrick
+	lda (ZBRICK_BASE),y    ; Read byte from brick line screen memory at offset.
+	and BRICK_TEST_TABLE,x ; Mask bits.
+
+	lda (ZBRICK_BASE),y    ; Store result back to brick line in screen memory
+	
+	iny                    ; Next byte in brick screen memory
+	inx                    ; Next entry in the Mask table.
+	
+	cpx #4                 ; If exceeded record length then comparison is done.
+	bne ?LoopCheckBrick
+		
+?ExitRoutine
+	safeRTS ; restore registers and CPU flags, then RTS
+
+	
