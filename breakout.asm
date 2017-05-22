@@ -134,51 +134,117 @@ PADDLE_MAX = (PLAYFIELD_RIGHT_EDGE_NORMAL-PLAYFIELD_LEFT_EDGE_NORMAL-11)
 ; routines when you can't use A, X, Y registers for other reasons.
 ; Essentially, think of these as extra data registers.
 ;
-; Also used as permanent variables with lower latency than 
-; regular memory.
+; Also used as permanent variables with lower latency than regular memory.
 
-; The Atari OS has defined purpose for most of the Page Zero 
+; The Atari OS has defined purpose for the first half of Page Zero 
 ; locations.  Since no Floating Point will be used here we'll 
 ; borrow the FP registers in Page Zero.
 
-PARAM_00 = $D4 ; ZMR_ROBOTO -- Is Mr Roboto playing the automatic demo mode?
-PARAM_01 = $D6 ; 
-PARAM_02 = $D7 ; 
-PARAM_03 = $D8 ; ZCOLLISION  -- If Brick is present - 0 = no, 1 = yes
-PARAM_04 = $D9 ; ZBRICK_LINE -- Ycoord reduced to line 1-8
-PARAM_05 = $DA ; ZBRICK_COL  -- Xcoord reduced to brick number 1-14
-PARAM_06 = $DB ; ZCOORD_Y    -- Ycoord for collision check
-PARAM_07 = $DC ; ZCOORD_X    -- Xcoord for collision check  
+PARAM_00 = $D4 ; ZMR_ROBOTO  -- Is Mr Roboto playing the automatic demo mode? init 1/yes
+PARAM_01 = $D6 ; ZDIR_X      -- +1 Right, -1 Left.  Indicates direction of travel.
+PARAM_02 = $D7 ; ZDIR_Y      -- +1 Down, -1 Up.  Indicates direction of travel.
+PARAM_03 = $D8 ; ZCOLLISION  -- Is Brick present at tested location? 0 = no, 1 = yes
+PARAM_04 = $D9 ; ZBRICK_LINE -- coord_Y reduced to line 1-8
+PARAM_05 = $DA ; ZBRICK_COL  -- coord_X reduced to brick number 1-14
+PARAM_06 = $DB ; ZCOORD_Y    -- coord_Y for collision check
+PARAM_07 = $DC ; ZCOORD_X    -- coord_X for collision check  
 PARAM_08 = $DD ;   
+;
+; And more Zero Page fun.  This is assembly, dude.  No BASIC in sight anywhere.
+; No BASIC means we can get craaaazy with the second half of Page Zero.
+;
+; In fact, there's no need to have the regular game variables out in high memory.  
+; For starters, all the Byte-sized values are hereby moved to Page 0.
+;
+PARAM_09 = $80 ; TITLE_STOP_GO - set by mainline to indicate title is working or not.
 
-; And more Zero Page fun.  This is assembly, dude.
-; No BASIC cart means we can get craaaazy.
+PARAM_10 = $81 ; TITLE_PLAYING - flag indicates title animation stage in progress. 
+PARAM_11 = $82 ; TITLE_TIMER - set by Title handler for pauses.
+PARAM_12 = $83 ; TITLE_HPOSP0 - Current P/M position of fly-in letter. or 0 if no letter.
+PARAM_13 = $84 ; TITLE_SIZEP0 - current size of Player 0
+PARAM_14 = $85 ; TITLE_GPRIOR - Current P/M Priority in title. 
+PARAM_15 = $86 ; TITLE_VSCROLL - current fine scroll position. (0 to 7)
+PARAM_16 = $87 ; TITLE_CSCROLL - current coarse scroll position. (0 to 4)
+PARAM_17 = $88 ; TITLE_CURRENT_FLYIN - current index (0 to 7) into tables for visible stuff in table below.
+PARAM_18 = $89 ; TITLE_SCROLL_COUNTER - index into the tables above. 0 to 32
+PARAM_19 = $8a ; TITLE_WSYNC_OFFSET - Number of scan lines to drop through before color draw
 
-PARAM_09 = $A0 ; ZDIR_X -- +1 Right, -1 Left.  Indicates direction of travel.
-PARAM_10 = $A1 ; ZDIR_Y -- +1 Down, -1 Up.  Indicates direction of travel.
-PARAM_11 = $A2 ;  
-PARAM_12 = $A3 ;  
-PARAM_13 = $A4 ;  
-PARAM_14 = $A5 ;  
-PARAM_15 = $A6 ;  
-PARAM_16 = $A7 ;  
-PARAM_17 = $A8 ;  
-PARAM_18 = $A9 ;  
-PARAM_19 = $AA ;  
-PARAM_20 = $AB ;  
-PARAM_21 = $AC ;  
-PARAM_22 = $AD ;  
-PARAM_23 = $AE ;  
-PARAM_24 = $AF ;  
-PARAM_25 = $B0 ;  
-PARAM_26 = $B1 ;  
-PARAM_27 = $B2 ;  
-PARAM_28 = $B3 ;  
-PARAM_29 = $B4 ;  
-PARAM_30 = $B5 ;  
-PARAM_31 = $B6 ;  
-PARAM_32 = $B7 ;  
+PARAM_20 = $8b ; TITLE_WSYNC_COLOR - Number of scan lines to do color bars
+PARAM_21 = $8c ; TITLE_COLOR_COUNTER - Index into color table
+PARAM_22 = $8d ; TITLE_DLI_PMCOLOR - PM Index into TITLE_DLI_PMCOLOR_TABLE
+PARAM_23 = $8e ; THUMPER_PROXIMITY/THUMPER_PROXIMITY_TOP
+PARAM_24 = $8f ; THUMPER_PROXIMITY_LEFT
+PARAM_25 = $90 ; THUMPER_PROXIMITY_RIGHT
+PARAM_26 = $91 ; THUMPER_FRAME/THUMPER_FRAME_TOP
+PARAM_27 = $92 ; THUMPER_FRAME_LEFT
+PARAM_28 = $93 ; THUMPER_FRAME_RIGHT
+PARAM_29 = $94 ; THUMPER_FRAME_LIMIT/THUMPER_FRAME_LIMIT_TOP
 
+PARAM_30 = $95 ; THUMPER_FRAME_LIMIT_LEFT
+PARAM_31 = $96 ; THUMPER_FRAME_LIMIT_RIGHT
+PARAM_32 = $97 ; THUMPER_COLOR/THUMPER_COLOR_TOP
+PARAM_33 = $98 ; THUMPER_COLOR_LEFT
+PARAM_34 = $99 ; THUMPER_COLOR_RIGHT
+PARAM_35 = $9a ; BRICK_SCREEN_START_SCROLL
+PARAM_36 = $9b ; BRICK_SCREEN_IMMEDIATE_POSITION
+PARAM_37 = $9c ; BRICK_SCREEN_IN_MOTION
+PARAM_38 = $9d ; ENABLE_BOOM
+PARAM_39 = $9e ; ENABLE_BALL
+
+PARAM_40 = $9f ; BALL_CURRENT_X
+PARAM_41 = $a0 ; BALL_CURRENT_Y
+PARAM_42 = $a1 ; BALL_HPOS
+PARAM_43 = $a2 ; BALL_NEW_X
+PARAM_44 = $a3 ; BALL_NEW_Y
+PARAM_45 = $a4 ; BALL_COLOR
+PARAM_46 = $a5 ; BALL_SPEED_CURRENT_SEQUENCE
+PARAM_47 = $a6 ; BALL_SPEED_CURRENT_STEP
+PARAM_48 = $a7 ; BALL_BOUNCE_COUNT
+PARAM_49 = $a8 ; ENABLE_CREDIT_SCROLL - MAIN: Flag to stop/start scrolling/visible text
+
+PARAM_50 = $a9 ; SCROLL_DO_FADE - MAIN: 0 = no fade.  1= fade up.  2 = fade down.
+PARAM_51 = $aa ; SCROLL_TICK_DELAY - MAIN: number of frames to delay per scroll step.
+PARAM_52 = $ab ; SCROLL_BASE - MAIN: Base table to start scrolling
+PARAM_53 = $ac ; SCROLL_MAX_LINES - MAIN: number of lines in scroll before restart.
+PARAM_54 = $ad ; SCROLL_CURRENT_TICK - VBI: Current tick for delay, decrementing to 0.
+PARAM_55 = $ae ; SCROLL_IN_FADE - VBI: fade is in progress? 0 = no. 1 = up. 2 = down
+PARAM_56 = $af ; SCROLL_CURRENT_FADE - VBI/DLI: VBI set for DLI - Current Fade Start position
+PARAM_57 = $b0 ; SCROLL_CURRENT_LINE - VBI: increment for start line of window.
+PARAM_58 = $b1 ; SCROLL_CURRENT_VSCROLL -  VBI/DLI: VBI sets for DLI -- Current Fine Vertical Scroll vertical position. 
+PARAM_59 = $b2 ; ENABLE_PADDLE
+
+PARAM_60 = $b3 ;   PADDLE_SIZE
+PARAM_61 = $b4 ;   PADDLE_HPOS
+PARAM_62 = $b5 ;   PADDLE_STRIKE
+PARAM_63 = $b6 ;   PADDLE_FRAME
+PARAM_64 = $b7 ;   PADDLE_STRIKE_COLOR
+PARAM_65 = $b8 ; ENABLE_BALL_COUNTER
+PARAM_66 = $b9 ;   BALL_COUNTER
+PARAM_67 = $ba ;   BALL_TITLE_HPOS - DLI: Add 8 for PM1 and then same for PM2
+PARAM_68 = $bb ;   SINE_WAVE_DELAY
+PARAM_69 = $bc ;   BALL_COUNTER_COLOR
+
+PARAM_70 = $bd ; ENABLE_SCORE
+PARAM_71 = $be ;   REAL_SCORE_DIGITS
+PARAM_72 = $bf ;   DISPLAYED_SCORE_DELAY
+PARAM_73 = $c0 ;   DISPLAYED_BALLS_SCORE_COLOR_INDEX
+PARAM_74 = $c1 ; ENABLE_SOUND
+PARAM_75 = $c2 ;   SOUND_CURRENT_VOICE
+PARAM_76 = $c3 ; ZAUTO_NEXT
+PARAM_77 = $c4 ; ZBRICK_COUNT  - init 112 (full screen of bricks)
+PARAM_78 = $c5 ; ZBRICK_POINTS - init 0 - point value of brick to add to score.
+PARAM_79 = $c6 ; ZBALL_COUNT   - init 5
+
+PARAM_80 = $c7 ;  
+PARAM_81 = $c8 ;    
+PARAM_82 = $c9 ;    
+PARAM_83 = $ca ;    
+PARAM_84 = $cb ; 
+PARAM_85 = $cc ;    
+PARAM_86 = $cd ; 
+PARAM_87 = $ce ; 
+PARAM_88 = $cf ; 
+PARAM_89 = $d0 ; 
 
 ZEROPAGE_POINTER_1 = $DE ; 
 ZEROPAGE_POINTER_2 = $E0 ; 
@@ -208,45 +274,41 @@ ZEROPAGE_POINTER_9 = $EE ; ZTITLE_COLPM0 -- VBI sets for DLI to use
 ;   VARIABLES AND DATA
 ;===============================================================================
 
-ball_count
-	.byte $05
+ZMR_ROBOTO =  PARAM_00 ; Is Mr Roboto playing the automatic demo mode? init 1/yes
 
-brick_points 
-	.byte $00
+ZDIR_X =      PARAM_01 ; +1 Right, -1 Left.  Indicates direction of travel.
+ 
+ZDIR_Y =      PARAM_02 ; +1 Down, -1 Up.  Indicates direction of travel.
 
-isBrick 
-	.byte $00
+ZCOLLISION =  PARAM_03 ; Is Brick present at tested location? 0 = no, 1 = yes
 
-brick_count 
-	.byte $28
+ZBRICK_LINE = PARAM_04 ; Ycoord reduced to line 1-8
 
-xchar   
-	.byte $00
+ZBRICK_COL =  PARAM_05 ; Xcoord reduced to brick number 1-14
 
-ychar   
-	.byte $00
+ZCOORD_Y =    PARAM_06 ; Ycoord for collision check
 
-dir_x   
-	.byte $00
+ZCOORD_XP =   PARAM_07 ; Xcoord for collision check  
 
-dir_y   
-	.byte $01
 
-score 
-	.byte $00, $00
-; A thought... The digits to screen conversion would work 
-; out easier if the individual digits were kept in separate 
-; bytes and not BCD packed. 
-; Altering this would be a mod for beta version.
+; flag when timer counted (29 sec). Used on the
+; title and game over  and auto play screens. When auto_wait
+; ticks it triggers automatic transition to the 
+; next screen.
+ZAUTO_NEXT =    PARAM_76 ; .byte 0
 
-mr_roboto
-	.byte $01  ; flag if the game play is in automatic mode.
+ZBRICK_COUNT =  PARAM_77 ; .byte 112 (full screen of bricks, 8 * 14)
 
-auto_next
-	.byte $00 ; flag when timer counted (29 sec). Used on the
-			; title and game over  and auto play screens. When auto_wait
-			; ticks it triggers automatic transition to the 
-			; next screen.
+ZBRICK_POINTS = PARAM_78 ; .byte $00
+
+ZBALL_COUNT =   PARAM_79 ; .byte $05
+
+
+ZBRICK_BASE =   ZEROPAGE_POINTER_8 = $EC ; Pointer to start of bricks on a line.
+
+ZTITLE_COLPM0 = ZEROPAGE_POINTER_9 = $EE ; VBI sets for DLI to use
+
+
 
 
 ;===============================================================================
@@ -549,14 +611,14 @@ move_ball
 
 
 move_ball_horz
-	lda dir_x
+	lda ZDIR_X
 	beq move_ball_left
 	jsr move_ball_right
 	rts
 
 
 move_ball_vert
-	lda dir_y
+	lda ZDIR_Y
 	beq moveball_up
 	jsr moveball_down
 	rts
@@ -573,7 +635,7 @@ move_ball_left
 	
 ?hit_left_wall
 	lda #1
-	sta dir_x
+	sta ZDIR_X
 	jsr sound_wall
 	
 	rts
@@ -591,7 +653,7 @@ move_ball_right
 	
 ?hit_right_wall
 	lda #0
-	sta dir_x
+	sta ZDIR_X
 	jsr sound_wall
 	
 	rts
@@ -608,7 +670,7 @@ moveball_up
 	
 hit_ceiling
 	lda #1
-	sta dir_y
+	sta ZDIR_Y
 	jsr sound_wall
 	
 	rts
@@ -625,9 +687,9 @@ moveball_down
 hit_floor
 	jsr sound_bing ; Buzzer for drop ball
 
-	dec ball_count ;update ball count
+	dec ZBALL_COUNT ;update ball count
 	jsr display_ball_count
-	lda ball_count
+	lda ZBALL_COUNT
 	bne continue_game
 
 	inc game_over_flag ; tell game loop we're over.
@@ -670,7 +732,7 @@ check_sprite_collision
 ?is_collision
 	sta HITCLR ; reset collision -- any write will do
 	lda #0
-	sta dir_y
+	sta ZDIR_Y
 	jsr sound_paddle
 
 exit_check_sprite_collision
@@ -700,7 +762,7 @@ check_sprite_background_collision
 	lda (ZEROPAGE_POINTER_1),y ; read the character under the ball.
 
 	jsr check_is_brick ; figure out if A is a brick?
-	lda isBrick 
+	lda ZCOLLISION 
 	beq ?no_collision ; if so, then no collision
 
 	;calc x,y parms to erase brick
@@ -722,9 +784,9 @@ check_sprite_background_collision
 
 	sta HITCLR ; reset collision -- any write will do
 	;flip vertical direction
-	lda dir_y
+	lda ZDIR_Y
 	eor #~00000001 ; Atari atasm syntax 
-	sta dir_y
+	sta ZDIR_Y
 	;move ball out of collision
 	jsr move_ball_vert 
 	jsr move_ball_vert
@@ -734,9 +796,9 @@ check_sprite_background_collision
 	jsr calc_brick_points
 
 	;update brick count
-	ldx brick_count
+	ldx ZBRICK_COUNT
 	dex
-	stx brick_count
+	stx ZBRICK_COUNT
 	;check is last brick
 	cpx #0
 	bne ?no_collision
@@ -749,7 +811,7 @@ check_sprite_background_collision
 		
 ;===============================================================================
 ;   CALCULATE POINTS SCORE
-;       outputs point value to "brick_points"
+;       outputs point value to "ZBRICK_POINTS"
 ;       calls routines to update score total "add_score"
 ;       and display updated score "display_score"
 ;===============================================================================
@@ -778,7 +840,7 @@ point_red
 	lda #7
 	jmp save_brick_points      
 save_brick_points
-	sta brick_points
+	sta ZBRICK_POINTS
 	jsr add_score
 	jsr display_score
 
@@ -791,15 +853,15 @@ save_brick_points
 reset_playfield
 	jsr draw_playfield
 	
-	lda #$28
-	sta brick_count
+	lda #112 ; (8 rows * 14 bricks)
+	sta ZBRICK_COUNT
 	
 	jsr display_score
 	
 	jsr reset_ball
 	
 	lda #1
-	sta dir_y
+	sta ZDIR_Y
 	
 	jsr move_ball_vert
 
@@ -820,7 +882,7 @@ reset_ball
 	jsr AtariSetBallImage ; Draw ball image at A, Y positions.
 
 	lda #1 ;set ball moving downward
-	sta dir_y
+	sta ZDIR_Y
 
 	rts
 
@@ -890,7 +952,7 @@ calc_ball_ychar
 ;   CHECK CHAR IS A BRICK CHARACTER
 ;===============================================================================
 ; Register A holds character code to check
-; output boolean value to 'isBrick'
+; output boolean value to 'ZCOLLISION'
 ; 0 = false , 1 = true
 ;===============================================================================
 ; From the Atari perspecive, blank spaces are 0, and
@@ -900,7 +962,7 @@ calc_ball_ychar
 check_is_brick
 	pha  ; save A 
 	lda #0
-	sta isBrick
+	sta ZCOLLISION
 	pla ; restore A
 
 	bne is_a_brick ; Atari -- any non-zero is a brick.
@@ -910,7 +972,7 @@ check_is_brick
 is_a_brick
 	pha  ; save A 
 	lda #1
-	sta isBrick
+	sta ZCOLLISION
 	pla ; restore A
 
 	rts
@@ -936,8 +998,8 @@ start_game
 	jsr setup_sprites
 	jsr reset_ball
 
-	lda #$28 
-	sta brick_count
+	lda #112 ; (8 rows * 14 bricks)
+	sta ZBRICK_COUNT
 
 	lda #0
 	sta game_over_flag
@@ -947,7 +1009,7 @@ start_game
 	jsr DisplayScore
 	
 	lda #5
-	sta ball_count
+	sta ZBALL_COUNT
 	jsr DisplayBall
 
 	rts
@@ -994,7 +1056,7 @@ add_score
 	sed
 	clc
 	lda score
-	adc brick_points
+	adc ZBRICK_POINTS
 	sta score
 	bcc ?return
 	lda score+1
@@ -1066,7 +1128,7 @@ display_score
 
 display_ball_count
 	clc
-	lda ball_count
+	lda ZBALL_COUNT
 	adc #NUM_BIN_TO_TEXT ; add offset for binary 0 to text 0
 	sta SCREEN_MEM+$3C5
 
@@ -1520,6 +1582,62 @@ exitSoundService
 	safeRTS ; restore registers and CPU flags, then RTS
 
 
+;===============================================================================
+; UPDATE SCORE
+;===============================================================================
+; Update the real score for the game.  Add the value of the brick 
+; that was hit/removed from display to the player's score.  
+; Notes:
+; To facilitate simple translation between value and screen display 
+; the score is managed by single bytes holding each place value
+; from 0 to 9.  When values are added the maximum value of a bytes
+; is 9 and if larger, a decimal carry occurs to the next position. 
+; The score is stored in memory low to hi byte/digit position rather 
+; than the way it would be displayed on screen.  This simplifies math.
+; The score shown on screen is a shadow of this value. The screen 
+; score is animated by incrementing every few frames until it matches 
+; the real score established here.
+;===============================================================================
+; Input: 
+; ZBRICK_POINTS: Value of brick to add to score.
+; 
+; Output:
+; REAL_SCORE:        Actual, current score. 
+; REAL_SCORE_DIGITS: Current number of digits in use. 
+;===============================================================================
+; Mode 6 color text for score.
+;===============================================================================
+
+Update_Score
+	saveRegs ; put CPU flags and registers on stack
+
+	ldx #1                ; Length of real digits.  
+	stx REAL_SCORE_DIGITS ; Guaranteed to be at least 1.
+	
+	lda ZBRICK_POINTS
+
+Add_Score_Digit
+	clc
+	adc REAL_SCORE-1,x    ; Add brick points to score.
+	sta REAL_SCORE-1,x
+	
+	cmp #$0a              ; result less than 10?
+	bcc End_Update_Score  ; Yes.  FInished.
+	
+	sbc #$0a              ; No.  Remove 10
+	sta REAL_SCORE,x      ; and save new value.
+	
+	lda #1                ; The 10 will carry to next position
+	
+	inx                   ; Increase length of score for next position
+	stx REAL_SCORE_DIGITS ; Remember the new length
+	
+	cpx #12
+	bne Add_Score_Digit
+	
+End_Update_Score
+	safeRTS ; restore registers and CPU flags, then RTS
+
 
 
 ;===============================================================================
@@ -1531,6 +1649,7 @@ exitSoundService
 	.include "display.asm"
 
 
+	
 ;===============================================================================
 ;   PROGRAM_INIT_ADDRESS
 ;===============================================================================
