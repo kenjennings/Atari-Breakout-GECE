@@ -953,36 +953,36 @@ CREDIT_46
 ; Four second delay (240) frames for viewing.
 ; Vscroll up 1 scanline until all lines gone.
 ; 
-TITLE_STOP_GO 
-	.byte 0 ; set by mainline to indicate title is working or not.
+TITLE_STOP_GO = PARAM_09 
+; .byte 0 ; set by mainline to indicate title is working or not.
 ; 0 = stop.
 ; 1 = go.  (after main routine has initialized restart).
 
-TITLE_PLAYING 
-	.byte 0 ; flag indicates title animation stage in progress. 
+TITLE_PLAYING = PARAM_10 
+; .byte 0 ; flag indicates title animation stage in progress. 
 ; 0 == not running -- title lines in 0/empty state. 
 ; 1 == clear. no movement. (Running a couple second of delay.)
 ; 2 == Text fly-in is in progress. 
 ; 3 == pause for public admiration. 
 ; 4 == Text  VSCROLL to top of screen in progress.  return to 0 state.
 
-TITLE_TIMER 
-	.byte 0 ; set by Title handler for pauses.
+TITLE_TIMER = PARAM_11
+; .byte 0 ; set by Title handler for pauses.
 
 
-TITLE_HPOSP0 
-	.byte 0 ; Current P/M position of fly-in letter. or 0 if no letter.
+TITLE_HPOSP0 = PARAM_12
+; .byte 0 ; Current P/M position of fly-in letter. or 0 if no letter.
 
-TITLE_SIZEP0 
-	.byte PM_SIZE_NORMAL ; current size of Player 0
+TITLE_SIZEP0 = PARAM_13
+; .byte PM_SIZE_NORMAL ; current size of Player 0
 
-TITLE_GPRIOR 
-	.byte 1 ; Current P/M Priority in title. 
+TITLE_GPRIOR = PARAM_14
+; .byte 1 ; Current P/M Priority in title. 
 
-TITLE_VSCROLL 
-	.byte 0 ; current fine scroll position. (0 to 7)
-TITLE_CSCROLL 
-	.byte 0 ; current coarse scroll position. (0 to 4)
+TITLE_VSCROLL = PARAM_15
+; .byte 0 ; current fine scroll position. (0 to 7)
+TITLE_CSCROLL = PARAM_16
+; .byte 0 ; current coarse scroll position. (0 to 4)
 
 
 ; Display List -- Title Scrolling coarse scroll conditions.
@@ -995,8 +995,8 @@ TITLE_FRAME_TABLE
 	.byte <TITLE_FRAME3
 
 
-TITLE_CURRENT_FLYIN 
-	.byte 0 ; current index (0 to 7) into tables for visible stuff in table below.
+TITLE_CURRENT_FLYIN = PARAM_17
+; .byte 0 ; current index (0 to 7) into tables for visible stuff in table below.
 
 ; Character base offset to data for custom BREAKOUT characters
 ; is the character set base + $A8.  Use that as starting address 
@@ -1057,22 +1057,22 @@ TITLE_COLOR_COUNTER_PLUS ; Flag to double-increment COLOR_COUNTER when losing li
 	.byte 1,1,1,1,1,1,1,1
 	.byte 1,1,1,1,1,1,1,1
 
-TITLE_SCROLL_COUNTER ; index into the tables above. 0 to 32
-	.byte 0
+TITLE_SCROLL_COUNTER = PARAM_18 
+; .byte 0 ; index into the tables above. 0 to 32
 
-	
+
 ; DLI parts.
-TITLE_WSYNC_OFFSET  
-	.byte 20 ; Number of scan lines to drop through before color draw
+TITLE_WSYNC_OFFSET = PARAM_19
+; .byte 20 ; Number of scan lines to drop through before color draw
 
-TITLE_WSYNC_COLOR   
-	.byte 12 ; Number of scan lines to do color bars
+TITLE_WSYNC_COLOR = PARAM_20
+; .byte 12 ; Number of scan lines to do color bars
 
-TITLE_COLOR_COUNTER 
-	.byte 0  ; Index into color table
+TITLE_COLOR_COUNTER = PARAM_21
+; .byte 0  ; Index into color table
 
-TITLE_DLI_PMCOLOR ; PM Index into TITLE_DLI_PMCOLOR_TABLE   
-	.byte 0
+TITLE_DLI_PMCOLOR = PARAM_22
+; .byte 0 ; PM Index into TITLE_DLI_PMCOLOR_TABLE  
 
 TITLE_DLI_PMCOLOR_TABLE ; which text color to use for P/M. referenced by TITLE_CURRENT_FLYIN.
 	.byte 0,1,2,3,0,1,2,3
@@ -1471,42 +1471,42 @@ THUMPER_RIGHT_SIZE_TABLE
 ;
 ; THUMPER-BUMPER Proximity set by MAIN code:
 ; 
-THUMPER_PROXIMITY
-THUMPER_PROXIMITY_TOP   
+THUMPER_PROXIMITY = PARAM_23
+THUMPER_PROXIMITY_TOP = PARAM_23
 	.byte $09 
-THUMPER_PROXIMITY_LEFT  
+THUMPER_PROXIMITY_LEFT = PARAM_24
 	.byte $09 
-THUMPER_PROXIMITY_RIGHT 
+THUMPER_PROXIMITY_RIGHT = PARAM_25
 	.byte $09 
 ;
 ; VBI maintains animation frame progress
 ;
-THUMPER_FRAME
-THUMPER_FRAME_TOP   
+THUMPER_FRAME = PARAM_26
+THUMPER_FRAME_TOP = PARAM_26
 	.byte 0 ; 0 is no animation. VBI Sets DLI vector for this.
-THUMPER_FRAME_LEFT  
+THUMPER_FRAME_LEFT = PARAM_27
 	.byte 0 ; 0 is no animation. DLI sets HPOS and SIZE
-THUMPER_FRAME_RIGHT 
+THUMPER_FRAME_RIGHT = PARAM_28
 	.byte 0 ; 0 is no animation. DLI sets HPOS and SIZE
 ;
 ; VBI maintains animation frames
 ;
-THUMPER_FRAME_LIMIT
-THUMPER_FRAME_LIMIT_TOP   
+THUMPER_FRAME_LIMIT = PARAM_29
+THUMPER_FRAME_LIMIT_TOP = PARAM_29
 	.byte 12 ; at 12 return to 0
-THUMPER_FRAME_LIMIT_LEFT  
+THUMPER_FRAME_LIMIT_LEFT = PARAM_30
 	.byte 6  ; at 6 return to 0
-THUMPER_FRAME_LIMIT_RIGHT 
+THUMPER_FRAME_LIMIT_RIGHT = PARAM_31
 	.byte 6  ; at 6 return to 0
 ;
 ; VBI sets colors, and DLI2 sets them on screen.
 ;
-THUMPER_COLOR
-THUMPER_COLOR_TOP   
+THUMPER_COLOR = PARAM_32
+THUMPER_COLOR_TOP = PARAM_32
 	.byte 0
-THUMPER_COLOR_LEFT  
+THUMPER_COLOR_LEFT = PARAM_33
 	.byte 0
-THUMPER_COLOR_RIGHT 
+THUMPER_COLOR_RIGHT = PARAM_34
 	.byte 0
 
 ; VBI sets the color of the thumper based on 
@@ -1763,20 +1763,20 @@ BRICK_SCREEN_MOVE_DELAY
 ;
 ; MAIN flag to VBI requesting start of screen transition.
 ;
-BRICK_SCREEN_START_SCROLL 
-	.byte 0
+BRICK_SCREEN_START_SCROLL = PARAM_35
+; .byte 0
 ;
 ; MAIN signal to move immediately to target positions if value is 1.
 ; Copy the BRICK_BRICK_SCREEN_TARGET_LMS_LMS and 
 ; BRICK_SCREEN_TARGET_HSCROL to all current positions.
 ;
-BRICK_SCREEN_IMMEDIATE_POSITION 
-	.byte 0
+BRICK_SCREEN_IMMEDIATE_POSITION = PARAM_36
+; .byte 0
 ;
 ; VBI Feedback to MAIN that it is busy moving
 ;
-BRICK_SCREEN_IN_MOTION 
-	.byte 0
+BRICK_SCREEN_IN_MOTION = PARAM_37
+; .byte 0
 ;
 ;
 ;
@@ -2017,8 +2017,8 @@ GAMEOVER_LINE_TABLE_HI
 ; Side note -- maybe a future iteration will utilize the boom-o-matic blocks 
 ; during Title or Game Over sequences.
 
-ENABLE_BOOM 
-	.byte 0
+ENABLE_BOOM = PARAM_38
+; .byte 0
 
 BOOM_1_REQUEST 
 	.byte 0,0,0,0,0,0,0,0 ; MAIN provides flag to add this brick. 0 = no brick. 1 = new brick.
@@ -2101,24 +2101,24 @@ BOOM_ANIMATION_FRAMES ; 7 bytes of Player image data per each cycle frame -- 8th
 ; VBI code updates the Player image and sets NEW as CURRENT.
 ; Everything else -- collisions and reactions are established by the MAIN code.
 
-ENABLE_BALL 
-	.byte 0 ; set by MAIN to turn on and off the ball.
+ENABLE_BALL = PARAM_39
+; .byte 0 ; set by MAIN to turn on and off the ball.
 
-BALL_CURRENT_X 
-	.byte 0
-BALL_CURRENT_Y 
-	.byte 0
+BALL_CURRENT_X = PARAM_40
+; .byte 0
+BALL_CURRENT_Y = PARAM_41
+; .byte 0
 
-BALL_HPOS 
-	.byte 0 ; this lets VBI tell DLI to remove from screen without zeroing CURRENT
+BALL_HPOS = PARAM_42
+; .byte 0 ; this lets VBI tell DLI to remove from screen without zeroing CURRENT
 
-BALL_NEW_X 
-	.byte 0 ; DLI sets HPOSP0
-BALL_NEW_Y 
-	.byte 0 ; VBI moves image
+BALL_NEW_X = PARAM_43
+; .byte 0 ; DLI sets HPOSP0
+BALL_NEW_Y = PARAM_44
+; .byte 0 ; VBI moves image
 
-BALL_COLOR 
-	.byte $0E ; and color.  anways bright.
+BALL_COLOR = PARAM_45
+; .byte $0E ; and color.  always bright.
 
 
 ;===============================================================================
@@ -2156,14 +2156,14 @@ BALL_SPEED_SEQUENCE
 	.byte 0,1,2,3,4,5,3 ; Note that the last step causes a loop of 3, 4, 5
 
 ; (inc this value, then get new current value from Speed sequence table. ) 
-BALL_SPEED_CURRENT_SEQUENCE 
-	.byte 0 ; which step in the sequence above is current. 
+BALL_SPEED_CURRENT_SEQUENCE = PARAM_46
+; .byte 0 ; which step in the sequence above is current. 
 
-BALL_SPEED_CURRENT_STEP 
-	.byte 0 ; 0 to 2
+BALL_SPEED_CURRENT_STEP = PARAM_47
+; .byte 0 ; 0 to 2
 
-BALL_BOUNCE_COUNT 
-	.byte 6 ; decrement at each paddle hit. When it reaches 0 it resets 
+BALL_BOUNCE_COUNT = PARAM_48
+; .byte 6 ; decrement at each paddle hit. When it reaches 0 it resets 
 ; to 6 and the next speed sequence begins..
 
 BALL_X_STEPS 
@@ -2192,27 +2192,27 @@ BALL_Y_STEPS
 
 ; State Controls
 
-ENABLE_CREDIT_SCROLL 
-	.byte 0 ; MAIN: Flag to stop/start scrolling/visible text
-SCROLL_DO_FADE 
-	.byte 0       ; MAIN: 0 = no fade.  1= fade up.  2 = fade down.
-SCROLL_TICK_DELAY 
-	.byte 0    ; MAIN: number of frames to delay per scroll step.
-SCROLL_BASE 
-	.word 0          ; MAIN: Base table to start scrolling
-SCROLL_MAX_LINES 
-	.byte 0     ; MAIN: number of lines in scroll before restart.
+ENABLE_CREDIT_SCROLL = PARAM_49
+; .byte 0 ; MAIN: Flag to stop/start scrolling/visible text
+SCROLL_DO_FADE = PARAM_50
+; .byte 0       ; MAIN: 0 = no fade.  1= fade up.  2 = fade down.
+SCROLL_TICK_DELAY = PARAM_51
+ ;.byte 0    ; MAIN: number of frames to delay per scroll step.
+SCROLL_BASE = PARAM_52
+ ;.word 0          ; MAIN: Base table to start scrolling
+SCROLL_MAX_LINES = PARAM_53
+ ;.byte 0     ; MAIN: number of lines in scroll before restart.
 
-SCROLL_CURRENT_TICK 
-	.byte 0    ; VBI: Current tick for delay, decrementing to 0.
-SCROLL_IN_FADE 
-	.byte 0         ; VBI: fade is in progress? 0 = no. 1 = up. 2 = down
-SCROLL_CURRENT_FADE 
-	.byte 0    ; VBI/DLI: VBI set for DLI - Current Fade Start position
-SCROLL_CURRENT_LINE 
-	.byte 0    ; VBI: increment for start line of window.
-SCROLL_CURRENT_VSCROLL 
-	.byte 0 ; VBI/DLI: VBI sets for DLI -- Current Fine Vertical Scroll vertical position. 
+SCROLL_CURRENT_TICK = PARAM_54
+; .byte 0    ; VBI: Current tick for delay, decrementing to 0.
+SCROLL_IN_FADE = PARAM_55
+; .byte 0         ; VBI: fade is in progress? 0 = no. 1 = up. 2 = down
+SCROLL_CURRENT_FADE = PARAM_56
+; .byte 0    ; VBI/DLI: VBI set for DLI - Current Fade Start position
+SCROLL_CURRENT_LINE = PARAM_57
+; .byte 0    ; VBI: increment for start line of window.
+SCROLL_CURRENT_VSCROLL = PARAM_58
+; .byte 0 ; VBI/DLI: VBI sets for DLI -- Current Fine Vertical Scroll vertical position. 
 
 ; Scroll text has shading on first and last lines.
 ; 6 values used at a time.
@@ -2444,12 +2444,12 @@ SUBTITLE_SCROLL_TABLE_SIZE=19  ; Address/words up to here, then loop around
 ; .222.... = ........ + .222.... + ........  == $00 + $70 + $00
 
 
-ENABLE_PADDLE 
-	.byte 0 ; Paddle displayed on screen?  0 = no.  1 = yes.
+ENABLE_PADDLE = PARAM_59
+; .byte 0 ; Paddle displayed on screen?  0 = no.  1 = yes.
 
 ; MAIN sets paddle image.  VBI set HPOS based on size.
-PADDLE_SIZE 
-	.byte 0 ; MAIN to VBI: Paddle Size  0 = Normal. 1 = Small.
+PADDLE_SIZE = PARAM_60
+; .byte 0 ; MAIN to VBI: Paddle Size  0 = Normal. 1 = Small.
 ;
 ; Convert Potentiometer value to Paddle screen position.
 ;
@@ -2483,8 +2483,8 @@ PADDLE_SMALL_POSITION_TABLE ; 228 bytes of HPOS coordinates corresponding to pad
 ; Positioning is very simple. Lookup potentiometer value in
 ; the table.  Set Player HPOS accordingly.
 ;
-PADDLE_HPOS 
-	.byte 0 ; VBI to DLI: X position of Player(s) making up paddle.
+PADDLE_HPOS = PARAM_61
+; .byte 0 ; VBI to DLI: X position of Player(s) making up paddle.
 
 ; CURRENT STATE:
 ; Paddle is made of several Player objects providing 
@@ -2501,25 +2501,25 @@ PADDLE_HPOS
 ;
 ; MAIN signals Paddle strike
 ;
-PADDLE_STRIKE 
-	.byte $00 
+PADDLE_STRIKE = PARAM_62
+; .byte $00 
 ;
 ; VBI maintains animation frames
 ;
-PADDLE_FRAME 
-	.byte 0 ; 9 to 0 
+PADDLE_FRAME = PARAM_63
+; .byte 0 ; 9 to 0 
 ;
 ; VBI sets the color of the top line of the paddle 
 ; (COLPM3) when the MAIN signals that the paddle 
 ; was struck.  9 to 0
 ;
 PADDLE_STRIKE_COLOR_ANIM
-	.byte $94,$84,$72,$74,$76,$78,$7A,$7C,$7E,$0E
+    .byte $94,$84,$72,$74,$76,$78,$7A,$7C,$7E,$0E
 ;
 ; VBI chooses color, and DLI sets them on screen.
 ;
-PADDLE_STRIKE_COLOR 
-	.byte $94
+PADDLE_STRIKE_COLOR = PARAM_64
+; .byte $94
 
 
 ;===============================================================================
@@ -2554,18 +2554,18 @@ PADDLE_STRIKE_COLOR
 ;
 
 	     
-ENABLE_BALL_COUNTER 
-	.byte 0
+ENABLE_BALL_COUNTER = PARAM_65
+; .byte 0
 ;
 ; How many game balls remaining?  5 max.
 ;
-BALL_COUNTER 
-	.byte 5
+BALL_COUNTER = PARAM_66
+; .byte 5
 ;
 ; Ball Counter Title positions for DLI
 ;
-BALL_TITLE_HPOS ; DLI: Add 8 for PM1 and then same for PM2
-	.byte $33
+BALL_TITLE_HPOS = PARAM_67 ; DLI: Add 8 for PM1 and then same for PM2
+; .byte $33
 ;
 ; "Text" labelling the balls, also done by Players.
 ;
@@ -2578,8 +2578,8 @@ BALL_TITLE_PM_BYTES_TABLE ; ordered PM0, PM1, PM2
 ;
 ; Don't need 60fps bounce.
 ;
-SINE_WAVE_DELAY 
-	.byte 0 
+SINE_WAVE_DELAY = PARAM_68
+; .byte 0 
 ;
 ; animation state for each ball, 5 max
 ;
@@ -2598,8 +2598,8 @@ BALL_COUNTER_PM_TABLE
 ;
 ; They all share another random unicorn sparkle.
 ;
-BALL_COUNTER_COLOR 
-	.byte 0
+BALL_COUNTER_COLOR = PARAM_69
+; .byte 0
 ;
 ; Vertical positions in Player memory map.
 ;
@@ -2638,22 +2638,22 @@ SINEWAVE
 ; to exceed the range of 12 digits, so there is little chance of rollover.
 ;
 ;
-ENABLE_SCORE 
-	.byte 0
+ENABLE_SCORE = PARAM_70
+; .byte 0
 ;
 REAL_SCORE                        ; MAIN updates this
 	.byte 0,0,0,0,0,0,0,0,0,0,0,0
 ;
-REAL_SCORE_DIGITS                 ; MAIN updates this
-	.byte 0
+REAL_SCORE_DIGITS = PARAM_71      ; MAIN updates this
+; .byte 0
 ;
 DISPLAYED_SCORE                   ; VBI updates this
 	.byte 0,0,0,0,0,0,0,0,0,0,0,0
 ;
 ; Count frames between visible score updates.
 ;
-DISPLAYED_SCORE_DELAY ; set to 10 when the score is updated
-	.byte $00
+DISPLAYED_SCORE_DELAY = PARAM_72 ; set to 10 when the score is updated
+; .byte $00
 ;
 ; convert internal score bytes to screen order positions
 ;
@@ -2688,20 +2688,29 @@ DISPLAYED_BALLS_COLOR
 	.byte $00,$02,$04,$06,$08,$0a,$0c,$0e
 	.byte $0e,$0c,$0a,$08,$06,$04,$02,$00
 	
-DISPLAYED_BALLS_SCORE_COLOR_INDEX
-	.byte 0
+DISPLAYED_BALLS_SCORE_COLOR_INDEX = PARAM_73
+; .byte 0
 
 	
 ;===============================================================================
 ; SOUND EFFECTS (not display)
 ;===============================================================================
-; Voice 0 and 1 == ball impacts -- paddle, walls, lost ball
+; Sounds are round-robin'd to voices 0, 1, 2, 3, 0, 1, ...
+; The next voice in line is assigned the next sound.
+; This allows the maximum Voice 0 and 1 == ball impacts -- paddle, walls, lost ball
 ; (There is no sound for hitting bricks, since that sound
 ; is actually the score counting ticks.)
 ; Voice 2 and 3 == score counter
 
-ENABLE_SOUND 
-	.byte 0 ; Enable sound playing. $0 = off, $1 = on.
+ENABLE_SOUND = PARAM_74
+; .byte 0 ; Enable sound playing. $0 = off, $1 = on.
+;
+; Sounds are queued to next available voice.  The circulation should
+; allow most sounds to complete the entire waveform before being
+; replaced by a new sound.
+;
+SOUND_CURRENT_VOICE = PARAM_75
+; .byte 0 ; 0, 1, 2, 3, 0, 1, ....
 ;
 ; An index for each voice.
 ;
