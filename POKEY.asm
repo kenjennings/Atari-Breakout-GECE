@@ -30,7 +30,7 @@ POTGO =  $D20B ; Start the POT scan sequence
 ;;
 STIMER = $D209 ; Start timers
 KBCODE = $D209 ; (Read) Keyboard code
-RANDOM = $D208 ; (Read) Random number
+RANDOM = $D20A ; (Read) Random number
 ;;
 SKREST = $D20A ; Reset Serial Status (SKSTAT)
 SEROUT = $D20D ; Serial port data output
