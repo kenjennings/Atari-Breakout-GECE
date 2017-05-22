@@ -57,10 +57,10 @@ Remove_VBI
 	rts
 
 
-; The magic happens here.  That is, much of the game guts, 
-; animation, and timing either occurs here or is established
-; here.   Main line and DLIs are, for the most part, only 
-; following directions determined here.
+; MAIN directs things to happen. The magic of that happening (is 
+; decided) here.  That is, much of the game guts, animation, and 
+; timing either occurs here or is established here.  For the most 
+; part, DLIs are only following directions determined here. 
 ;
 Breakout_VBI
 
@@ -1278,7 +1278,7 @@ Exit_VBI
 
 ;=============================================
 ; Used more than once to initialize
-; and then run the vertical scroll.
+; and then run the vertical scroll in the title.
 ; Given the value of X, set the 
 ; TITLE_SCROLL_COUNTER, and update 
 ; all the scrolling variables.
