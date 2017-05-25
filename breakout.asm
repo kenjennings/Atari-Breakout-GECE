@@ -235,7 +235,7 @@ PARAM_77 = $c4 ; ZBRICK_COUNT  - init 112 (full screen of bricks)
 PARAM_78 = $c5 ; ZBRICK_POINTS - init 0 - point value of brick to add to score.
 PARAM_79 = $c6 ; ZBALL_COUNT   - init 5
 
-PARAM_80 = $c7 ;  
+PARAM_80 = $c7 ; 
 PARAM_81 = $c8 ;    
 PARAM_82 = $c9 ;    
 PARAM_83 = $ca ;    
@@ -1433,25 +1433,149 @@ exit_waitFrame
 	rts
 
 
+.local
+;===============================================================================
+; MAIN STOP TITLE
+;===============================================================================
+; Turn off the Title animation.
+;===============================================================================
+; A  modified.
+;===============================================================================
+; Set flag referenced by VBI to start/stop animation of the Title line.
+;===============================================================================
+
+MainStopTitle
+
+	lda #0
+	sta TITLE_STOP_GO
+	
+	rts
 
 
+	
+.local
 ;===============================================================================
-; DISPLAY BYTE DATA
+; MAIN SET INITIAL BRICK POSITIONS
 ;===============================================================================
-; Displays the data stored in a given byte on the screen as readable text in hex format (0-F)
-; X = screen line - Yes, this is a little arse-backwards (X and Y) but I don't think
-; Y = screen column   addressing modes allow me to swap them around
+; Determine Horizontal Scroll Directions for each line.
+; Set HSCROLL per line for each line of graphics.
+; Set Display List LMS to corresponding starting position on each line.
+;===============================================================================
+; 
+;===============================================================================
+; * By default, the at rest or static position of the screen is 
+;   always the center screen at LMS offset +20 on every line.
+; * The expectation here is that the center screen is empty
+;   and the new screen bricks are being introduced.
+; * Placing a new screen of bricks requires updating screen data
+;   and setting the lines to left or right line positions while
+;   the bricks are NOT being displayed.  
+;   (This should not be too hard since the bulk of the brick section 
+;    is monopolized by a long running DLI, so MAIN line code won't get 
+;    much working time until after the DLI.)
+; * To animate bricks
+;   - write the brick pattern into the center position, and 
+;   - set all other scroll parameters, and
+;   - reset the LMS to the offscreen position
+;===============================================================================
+
+MainSetInitialBrickPositions
+
+	saveRegs ; Save regs so this is non-disruptive to caller
+
+	lda RANDOM                   ; choose random Canned direction table entries.
+	and #$38                     ; Resulting value 00, 08, 10, 18, 20, 28, 30, 38
+	sta PARAM_89 ; Direction     ; save to use later.
+	
+	lda RANDOM                   ; choose random canned speed table entries.
+	and #$18                     ; Resulting value 00, 08, 10, 18
+	sta PARAM_88 ; Speed         ; save to use later.
+	
+	bne SkipChooseScrollDelay    ; If Speed is not 0 then don't pick random delay.
+	
+	lda PARAM_89 ; Direction     ; If direction is not 00 or 08 then don't pick random delay.
+	cmp #$09
+	bcs SkipChooseScrollDelay
+	
+	lda RANDOM
+	and #$38                     ; Resulting value 00, 08, 10, 18, 20, 28, 30, 38
+	sta PARAM_87 ; Delay         ; save to use later.
+	
+	clc
+	bcc ?BeginInitScrollLoop
+	
+SkipChooseScrollDelay
+	lda #0
+	sta PARAM_87 ; Delay         ; save to use later.
+
+	
+?BeginInitScrollLoop
+	ldx #0  ; Brick Row.  0 to 7.  (otherwise the TABLES need to be flipped in reverse)
+
+InitBrickPositions
+	stx PARAM_86 ; Row           ; Need to reload X later
+	
+	ldy PARAM_89 ; Direction
+	lda TABLE_CANNED_BRICK_DIRECTIONS,y ; Get direction per canned list for the row.
+	sty BRICK_SCREEN_DIRECTION,x ; Save direction -1, +1 for row.
+	
+	iny                          ; Now direction is adjusted to 0, 2
+
+	lda BRICK_SCREEN_HSCROL,y    ; Get starting hscroll position per scroll direction.
+	sta BRICK_CURRENT_HSCROL,x   ; Set for the current row.
+	
+	lda BRICK_LMS_OFFSETS,x      ; Get LMS low byte offset per the row.
+	tax
+	lda BRICK_SCREEN_LMS,y       ; Get Starting LMS position per scroll direction.
+	sta BRICK_BASE,x             ; Set low byte of LMS to move row
+	
+	ldx PARAM_86 ; Row           ; Get the row number back.
+
+	ldy PARAM_88 ; Speed
+	lda TABLE_CANNED_BRICK_SPEED,y ; Get speed per canned list for the row.
+	sta BRICK_SCREEN_HSCROL_MOVE,x ; Set for the current row.
+	
+	ldy PARAM_87 ; Delay
+	lda TABLE_CANNED_BRICKS_DELAY,y ; Get delay per canned list for the row.
+	sta BRICK_SCREEN_MOVE_DELAY,x   ; Set for the current row.
+	
+	inx                             ; Increment to the next row.
+	cpx #8                          ; Reached the end?
+	beq EndInitBrickPositions       ; Yes. Exit.
+	
+	; Not the end.  Increment everything else.
+    
+    inc PARAM_89 ; Direction
+    inc PARAM_88 ; Speed
+    inc PARAM_87 ; Delay
+    
+    clc
+    bcc InitBrickPositions         ; Loop again.
+
+EndInitBrickPositions
+
+	safeRTS ; restore regs for safe exit
+
+
+.local
+;===============================================================================
+; DISPLAY BYTE of data
+;===============================================================================
+; Displays a byte of data at a specified screen coordinate 
+; in two-digit hex (0-F) format.
+;===============================================================================
+; X = screen line  
+; Y = screen column  
 ; A = byte to display
-; MODIFIES : ZEROPAGE_POINTER_1, ZEROPAGE_POINTER_3, PARAM4
+; MODIFIES : ZEROPAGE_POINTER_1, ZEROPAGE_POINTER_3, PARAM_99
 ;===============================================================================
-; Largely the same on Atari.  
-; BUT I notice the nybble to hex math is done twice.
-; and it is writing low nybble, high nybble right to left on the screen
-; Removing some redundancy with a lookup table.
+; Yes, "X" and "Y" appears to be flipped around.  But, this is done
+; to allow the "X" to use indexed indirect addressing in the Y register.
 ;===============================================================================
 
 DisplayByte
-	sta PARAM4                                      ; store the byte to display in PARAM4
+
+	sta PARAM_89                                    ; store the byte to retrieve later
 
 	saveRegs ; Save regs so this is non-disruptive to caller
 
@@ -1460,7 +1584,7 @@ DisplayByte
 	lda SCREEN_LINE_OFFSET_TABLE_HI,x               ; store high byte for screen
 	sta ZEROPAGE_POINTER_1 + 1
 
-	lda PARAM4                                      ; load the byte to be displayed
+	lda PARAM_89                                    ; load the byte to be displayed
 
 	lsr  ; divide by 16 to shift it into the low nybble ( value of 0-F)
 	lsr
@@ -1470,14 +1594,14 @@ DisplayByte
 	lda NYBBLE_TO_HEX,x  ; simplify. no math.  just lookup table.
 
 	sta (ZEROPAGE_POINTER_1),y                      ; write the character code
-	iny ; writes left to right.
-	lda PARAM4                                      ; fetch the byte to DisplayText
+	iny                                             ; in left to right order.
+	lda PARAM_89                                    ; re-fetch the byte to display
 									  
-	and #$0F ; low nybble is second character
+	and #$0F                                        ; low nybble is second character
 	tax
 	lda NYBBLE_TO_HEX,x  ; simplify. no math.  just lookup table.
 
-	sta (ZEROPAGE_POINTER_1),y                      ; write character and color
+	sta (ZEROPAGE_POINTER_1),y                      ; write character
 
 	safeRTS ; restore regs for safe exit
 
@@ -1485,103 +1609,110 @@ NYBBLE_TO_HEX ; Values in Atari format
 	.SBYTE "0123456789ABCDEF"
 
 
+.local
 ;===============================================================================
 ; SOUND EFFECTS
 ;===============================================================================
 
 sound_bing  ; bing/buzz on drop ball
-	lda #$01 ; index to bing sound in sound tables.
-	sta SOUND_INDEX
+	ldy #$01 ; index to bing sound in sound tables.
+	jsr SetNewSound
 
-		rts
+	rts
 
 
 sound_bounce ; hit a brick.
-	lda #$0E ; index to bounce sound in sound tables.
-	sta SOUND_INDEX
+	ldy #$0E ; index to bounce sound in sound tables.
+	jsr SetNewSound
 
 	rts
 
 
 sound_wall
-	lda #$1b ; index to bounce sound in sound tables.
-	sta SOUND_INDEX
+	ldy #$1b ; index to bounce sound in sound tables.
+	jsr SetNewSound
 
 	rts
 	
 	
 sound_paddle
-	lda #$28 ; index to bounce sound in sound tables.
-	sta SOUND_INDEX
+	ldy #$28 ; index to bounce sound in sound tables.
+	jsr SetNewSound
 
 	rts
 
 
-clear_sound
+;===============================================================================
+; CLEAR ALL SOUND
+;===============================================================================
+; Zero all sound voices. 
+; Zero the sequencer table entries.
+; Reset the Audio Control.
+;===============================================================================
+; The safest way to call this is to clear ENABLE_SOUND first to stop the 
+; Veritcal Blank sequencer, OR to be 100% certain that this code will not be
+; interrupted by the VBI. 
+;===============================================================================
+
+ClearAllSound
+
 	ldy #7 ; four channels, frequency (AUDFx) and control (AUDCx)
 	lda #0
 
-	sta SOUND_INDEX ; turn off any sound in progress.
-
 ?loop
+	sta SOUND_INDEX,y ; turn off any sound in progress in the queue.
 	sta AUDF1,y ; AUDFx and AUDCx  1, 2, 3, 4.
 	dey
 	bne ?loop
 
-	lda #AUDCTL_CLOCK_15KHZ ; Set only this one bit for clock.
+	lda #AUDCTL_CLOCK_64KHZ ; Set only this one bit for clock. (though, technically 0)
 	sta AUDCTL ; Audio Control
 
 	rts
 
-
-
+	
+.local
 ;===============================================================================
-; ATARI-SPECIFIC FUNCTIONS
+; SET NEW SOUND
 ;===============================================================================
-; Various routines needed to set up the Atari environment to simulate 
-; how everything is intended to execute on the C64 (with minimal changes).
+; Start playing a new sound.
 ;===============================================================================
-
+; Y = Index to sound table to add.
+; MODIFIES : 
 ;===============================================================================
-; Atari Sound Service
-;===============================================================================
-; The world's cheapest sequencer. Play one sound value from a table at each call.
-; Assuming this is done synchronized to the frame it performs a sound change every 
-; 16.6ms (approximately)
-; 
-; If the current index is zero then quit. 
-; Apply the Control and Frequency values from the tables to AUDC1 and AUDF1
-; If Control and Frequency are both 0 then the sound is over.  Zero the index.
-; If Control and Frequency are both non-zero, increment the index for the next call.
-;
-; No registers modified.
+; Sound is distributed in round robin to each of the four sound channels 
+; in order 1, 2, 3, 4. (or 0, 1, 2, 3, or actually, 0, 2, 4, 6 index values
+; which allows the same index to pick the sound channel, and correctly offset
+; the channel's control and frequency registers in POKEY.  
+; Given the rate of new sounds introduced to the queue in most cases this 
+; rotation allows previously queued sounds to finish playing before the 
+; sound channel must be re-used for a new sound.
 ;===============================================================================
 
-AtariSoundService
+SetNewSound
 
 	saveRegs ; put CPU flags and registers on stack
 
-	ldx SOUND_INDEX ; Get current sound progress
-	beq exitSoundService ; If zero, then no sound.
-
-	lda SOUND_AUDC_TABLE,x  ; Load current sound into registers
-	sta AUDC1
-	lda SOUND_AUDF_TABLE,x
-	sta AUDF1
-
-	; if AUDC and AUDF values are zero then zero the index
-	ora SOUND_AUDC_TABLE,x  ; if AUDC and AUDF values are not zero
-	bne nextSoundIndex  ; then incement index for next sound
-	sta SOUND_INDEX     ; otherwise, if 0 , then reset index to 0
-	beq exitSoundService
-
-nextSoundIndex
-	inc SOUND_INDEX ; increment index for next call.
+	lda ENABLE_SOUND        ; Is sound turned on?
+	beq ExitSetNewSound     ; No.  Exit.
 	
-exitSoundService
+	ldx SOUND_CURRENT_VOICE ; Get the current channel index.
+	sty SOUND_INDEX,x       ; Set the channel to the new sound index.
+	
+	inx                     ; Double increment channel index  for next channel.
+	inx 
+	cpx #8                  ; Exceeded max?
+	bne SetNextChannelIndex ; No. 
+	ldx #0                  ; Yes.  Reset to 0.
+	
+SetNextChannelIndex
+	stx SOUND_CURRENT_VOICE ; Save the new channel index.
+	
+ExitSetNewSound
 	safeRTS ; restore registers and CPU flags, then RTS
 
-
+	
+.local
 ;===============================================================================
 ; UPDATE SCORE
 ;===============================================================================
@@ -1590,10 +1721,10 @@ exitSoundService
 ; Notes:
 ; To facilitate simple translation between value and screen display 
 ; the score is managed by single bytes holding each place value
-; from 0 to 9.  When values are added the maximum value of a bytes
-; is 9 and if larger, a decimal carry occurs to the next position. 
+; from 0 to 9.  When values are added the maximum value of a byte
+; is 9 and if larger, a decimal carry occurs to the next byte. 
 ; The score is stored in memory low to hi byte/digit position rather 
-; than the way it would be displayed on screen.  This simplifies math.
+; than the way it would be displayed on screen.  This simplifies code here.
 ; The score shown on screen is a shadow of this value. The screen 
 ; score is animated by incrementing every few frames until it matches 
 ; the real score established here.
@@ -1608,7 +1739,8 @@ exitSoundService
 ; Mode 6 color text for score.
 ;===============================================================================
 
-Update_Score
+UpdateScore
+
 	saveRegs ; put CPU flags and registers on stack
 
 	ldx #1                ; Length of real digits.  
@@ -1616,13 +1748,13 @@ Update_Score
 	
 	lda ZBRICK_POINTS
 
-Add_Score_Digit
+AddScoreDigit
 	clc
 	adc REAL_SCORE-1,x    ; Add brick points to score.
 	sta REAL_SCORE-1,x
 	
-	cmp #$0a              ; result less than 10?
-	bcc End_Update_Score  ; Yes.  FInished.
+	cmp #$0a              ; Result less than 10?
+	bcc EndUpdateScore    ; Yes.  Finished.
 	
 	sbc #$0a              ; No.  Remove 10
 	sta REAL_SCORE,x      ; and save new value.
@@ -1633,9 +1765,9 @@ Add_Score_Digit
 	stx REAL_SCORE_DIGITS ; Remember the new length
 	
 	cpx #12
-	bne Add_Score_Digit
+	bne AddScoreDigit
 	
-End_Update_Score
+EndUpdateScore
 	safeRTS ; restore registers and CPU flags, then RTS
 
 
@@ -1644,7 +1776,7 @@ End_Update_Score
 ;   DISPLAY RELATED MEMORY
 ;===============================================================================
 ; This is loaded last, because it defines several large blocks and
-; repeatedly forces alignment to page, and K boundaries.
+; repeatedly forces (re)alignment to Page and K boundaries.
 ;
 	.include "display.asm"
 
@@ -1655,14 +1787,13 @@ End_Update_Score
 ;===============================================================================
 ; Atari uses a structured executable file format that 
 ; loads data to specific memory and provides an automatic 
-; run address.  There is no need to interact with BASIC 
-; the way the C64 does startup.
+; run address.
 ;===============================================================================
 ; Store the program start location in the Atari DOS RUN Address.
 ; When DOS is done loading the executable it will automatically
 ; jump to the address placed in the DOS_RUN_ADDR.
 ;===============================================================================
-
+;
 	*=DOS_RUN_ADDR
 	.word PRG_START
 
