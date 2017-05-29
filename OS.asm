@@ -457,7 +457,7 @@ CH1 =    $02F2 ; Keyboard character code previously in CH/$02FC.
 ; CHBAS = $02F4 in ANTIC.asm
 
 ATACHR = $02FA ; Last value read or written at graphics cursor.  Atascii in text modes. color number in others.  
-CH =     $02FC ; Internal keyboard code of last key pressed.  $FF is no key pressesd.
+; CH =     $02FC ; in POKEY.asm KBCODE - Internal keyboard code of last key pressed.  $FF is no key pressed.
 FILDAT = $02FD ; Color for the fill region.
 DSPFLG = $02FE ; E: config for cursor control characters. 0 = normal operation. !0 = Display cursor controls instead of acting on them.
 SSFLAG = $02FF ; Scrolling stop/start control. 0 = normal scrolling.  $FF = stop scrolling.
@@ -524,6 +524,54 @@ IOCB6 = $03A0 ; IOCB for channel 6
 IOCB7 = $03B0 ; IOCB for channel 7
 
 PRNBUF = $03C0 ; 40 bytes up to $3E7
+
+; CIO Common Device Commands
+CIO_OPEN =       $03
+CIO_GET_RECORD = $05
+CIO_GET_BYTES =  $07
+CIO_PUT_RECORD = $09
+CIO_PUT_BYTES =  $0B
+CIO_CLOSE =      $0C
+CIO_STATUS =     $0D
+CIO_SPECIAL =    $0E
+
+; CIO Device Commands for D:
+CIO_D_RENAME =      $20 ; Rename a file
+CIO_D_DELETE =      $21 ; Delete the named file
+CIO_D_LOCK =        $23 ; Lock/protect the file
+CIO_D_UNLOCK =      $24 ; unlock/unprotect the file
+
+CIO_D_POINT =       $25 ; Move to sector/byte position
+CIO_D_NOTE =        $26 ; Get current sector/byte position
+
+CIO_D_FILELEN =     $27 ; Get file length
+CIO_D_CD_MYDOS =    $29 ; MyDos cd (change directory)
+CIO_D_MKDIR_MYDOS = $2A ; MyDos (and SpartaDos) mkdir (make directory)
+CIO_D_RMDIR_SPDOS = $2B ; SpartaDos rmdir (remove directory)
+CIO_D_CD_SPDOS    = $2C ; SpartaDos cd (change directory)
+CIO_D_PWD_MYDOS   = $30 ; MyDos (and SpartaDos) print/get working directory 
+
+CIO_D_FORMAT =      $FE ; Format Disk
+
+; CIO Device Commands for S:
+CIO_S_DRAWTO = $11
+CIO_S_FILL =   $12
+
+; ICAX1 Common Options (OPEN modes).
+CIO_ICAX_READ      = $04
+CIO_ICAX_WRITE     = $08 ; READ + WRITE starts I/O at first byte.
+
+; ICAX1 Less Common Options (OPEN modes.)
+CIO_ICAX_E_FORCED     = $01 ; E: FORCED input. Usually with READ + WRITE.
+CIO_ICAX_D_APPEND     = $01 ; D: Write starts at end of file. Usually with READ + WRITE.
+CIO_ICAX_D_DIRECTORY  = $02 ; D: DIRECTORY.  Use with READ. 
+
+CIO_ICAX_S_TEXTWINDOW = $10 ; S: Open graphics mode with text window. Ignored for 0, 9, 10, 11.
+CIO_ICAX_S_DONOTCLEAR = $20 ; S: Suppress clear screen for graphics mode. 
+
+; Note: 
+; The ICAX2 value for S: is the OS graphics mode number.
+; If the mode is 0, 9, 10, or 11 the text Window option is ignored.
 
 ;=================================================
 ; OS Page 4, 5, 6   
